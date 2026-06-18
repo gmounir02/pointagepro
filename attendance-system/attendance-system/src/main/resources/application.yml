@@ -1,0 +1,30 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: attendance-system
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/attendance_system
+      database: attendance_system
+
+app:
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    expiration: 86400000      # 24h en ms
+    refresh-expiration: 604800000  # 7j en ms
+
+  # Heure limite de présence (08:30)
+  work:
+    start-hour: 8
+    start-minute: 30
+
+  # Distance GPS max (en mètres)
+  gps:
+    default-radius: 100
+
+logging:
+  level:
+    com.attendance: DEBUG
+    org.springframework.security: INFO
