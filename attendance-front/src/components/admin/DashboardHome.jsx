@@ -1178,23 +1178,25 @@ export default function DashboardHome() {
                           <td style={{ padding: "12px", color: "#fff", fontWeight: "600", textTransform: "capitalize" }}>
                             {formattedDate}
                           </td>
-                          <td style={{ padding: "12px", color: "#fff" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span>🟢 {formatTime(p.heureEntree)}</span>
-                              {p.photoEntree && (
-                                <button 
-                                  type="button" 
-                                  style={{ background: "none", border: "none", color: "var(--primary)", cursor: "pointer", display: "inline-flex", padding: 0 }}
-                                  onClick={() => setPreviewSelfieModal({ photo: p.photoEntree, title: `Selfie d'entrée - ${historyEmployee.fullName}`, time: formatTime(p.heureEntree), date: formattedDate })}
-                                  title="Voir la photo d'entrée"
-                                >
-                                  📷
-                                </button>
-                              )}
-                            </div>
+                          <td style={{ padding: "12px", color: p.type === "ABSENCE" ? "var(--text-muted)" : "#fff" }}>
+                            {p.type === "ABSENCE" ? "🚫 --:--" : (
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span>🟢 {formatTime(p.heureEntree)}</span>
+                                {p.photoEntree && (
+                                  <button 
+                                    type="button" 
+                                    style={{ background: "none", border: "none", color: "var(--primary)", cursor: "pointer", display: "inline-flex", padding: 0 }}
+                                    onClick={() => setPreviewSelfieModal({ photo: p.photoEntree, title: `Selfie d'entrée - ${historyEmployee.fullName}`, time: formatTime(p.heureEntree), date: formattedDate })}
+                                    title="Voir la photo d'entrée"
+                                  >
+                                    📷
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </td>
                           <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                            {p.heureSortie ? (
+                            {p.type === "ABSENCE" ? "🚫 --:--" : (p.heureSortie ? (
                               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                                 <span>🔴 {formatTime(p.heureSortie)}</span>
                                 {p.photoSortie && (
@@ -1208,11 +1210,13 @@ export default function DashboardHome() {
                                   </button>
                                 )}
                               </div>
-                            ) : "Non pointé"}
+                            ) : "Non pointé")}
                           </td>
                           <td style={{ padding: "12px" }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
-                              {p.enRetard ? (
+                              {p.type === "ABSENCE" ? (
+                                <span className="badge badge-danger" style={{ fontSize: "0.75rem" }}>🚫 Absent</span>
+                              ) : p.enRetard ? (
                                 <span className="badge badge-warning" style={{ fontSize: "0.75rem" }}>⚠️ Retard</span>
                               ) : (
                                 <span className="badge badge-success" style={{ fontSize: "0.75rem" }}>🟢 À temps</span>
@@ -1222,7 +1226,7 @@ export default function DashboardHome() {
                                   🚪 Sortie Anticipée
                                 </span>
                               )}
-                              {p.heuresInsuffisantes && (
+                              {p.heuresInsuffisantes && p.type !== "ABSENCE" && (
                                 <span className="badge" style={{ fontSize: "0.75rem", background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
                                   ⏱️ Heures &lt; 8h
                                 </span>
@@ -1230,7 +1234,7 @@ export default function DashboardHome() {
                             </div>
                           </td>
                           <td style={{ padding: "12px", color: "#fff", fontWeight: "500" }}>
-                            {formatDuration(p.dureeMinutes)}
+                            {p.type === "ABSENCE" ? "-" : formatDuration(p.dureeMinutes)}
                           </td>
                           <td style={{ padding: "12px", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
                             {p.note || "-"}

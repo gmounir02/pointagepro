@@ -564,21 +564,23 @@ export default function EmployeeManager() {
                           <td style={{ padding: "12px", color: "#fff", fontWeight: "600", textTransform: "capitalize" }}>
                             {formattedDate}
                           </td>
-                          <td style={{ padding: "12px", color: "#fff" }}>
-                            🟢 {formatTime(p.heureEntree)}
+                          <td style={{ padding: "12px", color: p.type === "ABSENCE" ? "var(--text-muted)" : "#fff" }}>
+                            {p.type === "ABSENCE" ? "🚫 --:--" : `🟢 ${formatTime(p.heureEntree)}`}
                           </td>
                           <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                            {p.heureSortie ? `🔴 ${formatTime(p.heureSortie)}` : "Non pointé"}
+                            {p.type === "ABSENCE" ? "🚫 --:--" : (p.heureSortie ? `🔴 ${formatTime(p.heureSortie)}` : "Non pointé")}
                           </td>
                           <td style={{ padding: "12px" }}>
-                            {p.enRetard ? (
+                            {p.type === "ABSENCE" ? (
+                              <span className="badge badge-danger" style={{ fontSize: "0.75rem" }}>🚫 Absent</span>
+                            ) : p.enRetard ? (
                               <span className="badge badge-warning" style={{ fontSize: "0.75rem" }}>Retard</span>
                             ) : (
                               <span className="badge badge-success" style={{ fontSize: "0.75rem" }}>À temps</span>
                             )}
                           </td>
                           <td style={{ padding: "12px", color: "#fff", fontWeight: "500" }}>
-                            {formatDuration(p.dureeMinutes)}
+                            {p.type === "ABSENCE" ? "-" : formatDuration(p.dureeMinutes)}
                           </td>
                           <td style={{ padding: "12px", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
                             {p.note || "-"}
