@@ -104,6 +104,16 @@ public class UserService {
         return UserResponse.from(user);
     }
 
+    public UserResponse updateProfilePhoto(String email, String photoBase64) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AttendanceException("Utilisateur introuvable"));
+        user.setPhotoProfile(photoBase64);
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+        log.info("Photo de profil mise à jour pour l'utilisateur: {}", email);
+        return UserResponse.from(user);
+    }
+
     private User findUserById(String id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new AttendanceException("Utilisateur introuvable avec l'id: " + id));

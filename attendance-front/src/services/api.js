@@ -102,6 +102,7 @@ export const api = {
     update: (id, data) => request(`/users/${id}`, { method: "PUT", body: data }),
     delete: (id) => request(`/users/${id}`, { method: "DELETE" }),
     toggleStatus: (id) => request(`/users/${id}/toggle-status`, { method: "PATCH" }),
+    updateProfilePhoto: (photoBase64) => request("/users/me/photo", { method: "PATCH", body: { photoProfile: photoBase64 } }),
   },
 
   // Pointages (Attendance)
