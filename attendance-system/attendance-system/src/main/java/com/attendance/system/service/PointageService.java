@@ -187,10 +187,96 @@ public class PointageService {
         return activePointage;
     }
 
+    private boolean isJourFerieMarocain(LocalDate date) {
+        int day = date.getDayOfMonth();
+        int month = date.getMonthValue();
+        
+        // Jours fériés civils fixes au Maroc
+        if (month == 1 && day == 1) return true;   // Nouvel An
+        if (month == 1 && day == 11) return true;  // Manifeste de l'Indépendance
+        if (month == 1 && day == 14) return true;  // Nouvel An Amazigh (Yennayer)
+        if (month == 5 && day == 1) return true;   // Fête du Travail
+        if (month == 7 && day == 30) return true;  // Fête du Trône
+        if (month == 8 && day == 14) return true;  // Allégeance Oued Ed-Dahab
+        if (month == 8 && day == 20) return true;  // Révolution du Roi et du Peuple
+        if (month == 8 && day == 21) return true;  // Fête de la Jeunesse
+        if (month == 11 && day == 6) return true;  // Anniversaire de la Marche Verte
+        if (month == 11 && day == 18) return true; // Fête de l'Indépendance
+        
+        return false;
+    }
+
+    private List<Pointage> synthesizeAbsences(List<Pointage> realPointages, User user) {
+        java.util.List<Pointage> result = new java.util.ArrayList<>(realPointages);
+        
+        LocalDate startDate = user.getCreatedAt() != null 
+                ? user.getCreatedAt().toLocalDate() 
+                : LocalDate.now().minusDays(30);
+        LocalDate endDate = LocalDate.now();
+        
+        // Récupérer les congés approuvés pour cet utilisateur
+        List<Conge> conges = congeRepository.findByUserId(user.getId());
+        
+        LocalDate currentDate = startDate;
+        while (!currentDate.isAfter(endDate)) {
+            // Ignorer les weekends
+            java.time.DayOfWeek dayOfWeek = currentDate.getDayOfWeek();
+            if (dayOfWeek == java.time.DayOfWeek.SATURDAY || dayOfWeek == java.time.DayOfWeek.SUNDAY) {
+                currentDate = currentDate.plusDays(1);
+                continue;
+            }
+            
+            // Ignorer les jours fériés marocains
+            if (isJourFerieMarocain(currentDate)) {
+                currentDate = currentDate.plusDays(1);
+                continue;
+            }
+            
+            // Vérifier s'il y a déjà un pointage pour cette date
+            final LocalDate dateToCheck = currentDate;
+            boolean hasPointage = realPointages.stream().anyMatch(p -> p.getDate().equals(dateToCheck));
+            if (hasPointage) {
+                currentDate = currentDate.plusDays(1);
+                continue;
+            }
+            
+            // Vérifier si l'employé est en congé approuvé ce jour-là
+            boolean enConge = conges.stream()
+                .anyMatch(c -> c.getStatut() == Conge.StatutConge.APPROUVE && 
+                               !dateToCheck.isBefore(c.getDateDebut()) && 
+                               !dateToCheck.isAfter(c.getDateFin()));
+            if (enConge) {
+                currentDate = currentDate.plusDays(1);
+                continue;
+            }
+            
+            // Si pas de pointage et pas en congé -> Absence automatique
+            Pointage tempAbsence = Pointage.builder()
+                    .id("temp-ABSENCE-" + currentDate)
+                    .userId(user.getId())
+                    .userFullName(user.getFirstName() + " " + user.getLastName())
+                    .date(currentDate)
+                    .type(Pointage.TypePointage.ABSENCE)
+                    .statutJustification("NON_JUSTIFIE")
+                    .note("Absence automatique - Non pointé")
+                    .heuresInsuffisantes(true)
+                    .build();
+            
+            result.add(tempAbsence);
+            currentDate = currentDate.plusDays(1);
+        }
+        
+        // Trier par date décroissante
+        result.sort((p1, p2) -> p2.getDate().compareTo(p1.getDate()));
+        
+        return result;
+    }
+
     public List<Pointage> getMesPointages(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new AttendanceException("Utilisateur introuvable"));
-        return pointageRepository.findByUserId(user.getId());
+        List<Pointage> realPointages = pointageRepository.findByUserId(user.getId());
+        return synthesizeAbsences(realPointages, user);
     }
 
     public List<Pointage> getPointagesByDate(LocalDate date) {
@@ -198,11 +284,20 @@ public class PointageService {
     }
 
     public List<Pointage> getPointagesByUser(String userId) {
-        return pointageRepository.findByUserId(userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AttendanceException("Utilisateur introuvable"));
+        List<Pointage> realPointages = pointageRepository.findByUserId(userId);
+        return synthesizeAbsences(realPointages, user);
     }
 
     public List<Pointage> getPointagesByPeriode(String userId, LocalDate debut, LocalDate fin) {
-        return pointageRepository.findByUserIdAndDateBetween(userId, debut, fin);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AttendanceException("Utilisateur introuvable"));
+        List<Pointage> realPointages = pointageRepository.findByUserIdAndDateBetween(userId, debut, fin);
+        List<Pointage> allSynthesized = synthesizeAbsences(realPointages, user);
+        return allSynthesized.stream()
+                .filter(p -> !p.getDate().isBefore(debut) && !p.getDate().isAfter(fin))
+                .toList();
     }
 
     public List<Pointage> getJustificationsEnAttente() {
@@ -210,11 +305,28 @@ public class PointageService {
     }
 
     public Pointage soumettreJustification(String pointageId, String userEmail, JustificationRequest request) {
-        Pointage pointage = pointageRepository.findById(pointageId)
-                .orElseThrow(() -> new AttendanceException("Pointage introuvable"));
-
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new AttendanceException("Utilisateur introuvable"));
+        
+        Pointage pointage;
+        if (pointageId.startsWith("temp-ABSENCE-")) {
+            String dateStr = pointageId.substring("temp-ABSENCE-".length());
+            LocalDate date = LocalDate.parse(dateStr);
+            pointage = Pointage.builder()
+                    .userId(user.getId())
+                    .userFullName(user.getFirstName() + " " + user.getLastName())
+                    .date(date)
+                    .type(Pointage.TypePointage.ABSENCE)
+                    .statutJustification("EN_ATTENTE")
+                    .note("Absence automatique - Non pointé")
+                    .heuresInsuffisantes(true)
+                    .build();
+            pointage = pointageRepository.save(pointage);
+            log.info("Création d'un enregistrement d'absence réel pour la date {} suite à justification", date);
+        } else {
+            pointage = pointageRepository.findById(pointageId)
+                    .orElseThrow(() -> new AttendanceException("Pointage introuvable"));
+        }
 
         if (!pointage.getUserId().equals(user.getId())) {
             throw new AttendanceException("Vous n'êtes pas autorisé à justifier ce pointage");
