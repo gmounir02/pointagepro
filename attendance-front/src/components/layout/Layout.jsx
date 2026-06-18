@@ -27,9 +27,27 @@ export default function Layout({ activeTab, setActiveTab, children }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+  const [photoProfile, setPhotoProfile] = useState(null);
   
   const dropdownRef = useRef(null);
   const bellRef = useRef(null);
+
+  // Fetch Profile Photo
+  useEffect(() => {
+    const fetchProfilePhoto = async () => {
+      try {
+        if (user) {
+          const profile = await api.users.getProfile();
+          if (profile && profile.photoProfile) {
+            setPhotoProfile(profile.photoProfile);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch profile photo in layout", err);
+      }
+    };
+    fetchProfilePhoto();
+  }, [user]);
 
   // Fetch Notifications
   const fetchNotifications = async () => {
@@ -156,7 +174,20 @@ export default function Layout({ activeTab, setActiveTab, children }) {
 
         <div style={styles.userProfile}>
           <div style={styles.avatar}>
-            {user?.fullName?.charAt(0) || "U"}
+            {photoProfile ? (
+              <img 
+                src={photoProfile} 
+                alt="Profile" 
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  borderRadius: "inherit"
+                }}
+              />
+            ) : (
+              user?.fullName?.charAt(0) || "U"
+            )}
           </div>
           <div style={styles.userInfo}>
             <div style={styles.userName}>{user?.fullName}</div>
@@ -395,6 +426,7 @@ const styles = {
     fontWeight: "700",
     fontSize: "1.1rem",
     boxShadow: "0 4px 10px rgba(139, 92, 246, 0.3)",
+    overflow: "hidden",
   },
   userInfo: {
     flex: 1,
