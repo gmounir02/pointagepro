@@ -432,10 +432,10 @@ public class AttendanceSystemApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.nomEntreprise").value("Ma Super Company"));
 
-        // 3. Tenter de lire la config en tant qu'employé (Interdit / 403)
+        // 3. Lire la config en tant qu'employé (Autorisé / 200)
         mockMvc.perform(get("/api/config")
                 .header("Authorization", employeeToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
 
         // 4. Lire la config en tant qu'admin (Ok / 200)
         mockMvc.perform(get("/api/config")
