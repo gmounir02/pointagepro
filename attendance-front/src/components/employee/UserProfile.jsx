@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../../services/api";
 import { useNotification } from "../../context/GlobalContext";
-import { User, Mail, Phone, Briefcase, Network, ToggleLeft, Calendar, ShieldCheck, Camera } from "lucide-react";
+import { User, Mail, Phone, Briefcase, Network, ToggleLeft, Calendar, ShieldCheck } from "lucide-react";
 
 export default function UserProfile() {
   const { showNotification } = useNotification();
@@ -29,29 +29,6 @@ export default function UserProfile() {
     return date.toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" });
   };
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      showNotification("La photo ne doit pas dépasser 2 Mo", "danger");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        const base64String = reader.result;
-        await api.users.updateProfilePhoto(base64String);
-        setProfile(prev => ({ ...prev, photoProfile: base64String }));
-        showNotification("Photo de profil mise à jour avec succès !", "success");
-      } catch (err) {
-        showNotification("Erreur lors de la mise à jour de la photo", "danger");
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -73,35 +50,24 @@ export default function UserProfile() {
           {/* Avatar Area */}
           <div style={styles.avatarSection}>
             <div style={styles.avatarGlow}></div>
-            <label style={styles.avatarContainer} title="Changer de photo de profil">
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handlePhotoChange} 
-                style={{ display: "none" }} 
-              />
-              <div style={styles.avatar}>
-                {profile.photoProfile ? (
-                  <img 
-                    src={profile.photoProfile} 
-                    alt="Profile" 
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      borderRadius: "inherit"
-                    }}
-                  />
-                ) : (
-                  <span style={{ fontSize: "2.5rem" }}>
-                    {profile.firstName?.charAt(0)}{profile.lastName?.charAt(0)}
-                  </span>
-                )}
-                <div className="avatar-hover-overlay" style={styles.avatarHoverOverlay}>
-                  <Camera size={24} color="#fff" />
-                </div>
-              </div>
-            </label>
+            <div style={styles.avatar}>
+              {profile.photoProfile ? (
+                <img 
+                  src={profile.photoProfile} 
+                  alt="Profile" 
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    borderRadius: "inherit"
+                  }}
+                />
+              ) : (
+                <span style={{ fontSize: "2.5rem" }}>
+                  {profile.firstName?.charAt(0)}{profile.lastName?.charAt(0)}
+                </span>
+              )}
+            </div>
             
             <h3 style={styles.fullName}>
               {profile.firstName} {profile.lastName}
@@ -231,10 +197,6 @@ const styles = {
     zIndex: 1,
     filter: "blur(5px)",
   },
-  avatarContainer: {
-    cursor: "pointer",
-    zIndex: 2,
-  },
   avatar: {
     position: "relative",
     width: "120px",
@@ -250,20 +212,7 @@ const styles = {
     boxShadow: "0 10px 25px rgba(139, 92, 246, 0.4)",
     border: "1px solid rgba(255, 255, 255, 0.15)",
     overflow: "hidden",
-  },
-  avatarHoverOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    background: "rgba(0, 0, 0, 0.6)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    opacity: 0,
-    transition: "opacity 0.3s ease",
-    borderRadius: "inherit",
+    zIndex: 2,
   },
   fullName: {
     fontSize: "1.6rem",
@@ -318,9 +267,6 @@ const styles = {
 if (typeof document !== "undefined") {
   const style = document.createElement("style");
   style.innerHTML = `
-    label:hover .avatar-hover-overlay {
-      opacity: 1 !important;
-    }
     @media (max-width: 768px) {
       div[style*="grid-template-columns: 1fr 1fr"] {
         grid-template-columns: 1fr !important;

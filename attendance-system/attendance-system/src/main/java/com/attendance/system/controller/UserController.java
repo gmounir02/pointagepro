@@ -42,14 +42,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(userService.getMyProfile(auth.getName())));
     }
 
-    @PatchMapping("/me/photo")
-    public ResponseEntity<ApiResponse<UserResponse>> updateMyPhoto(
-            @RequestBody java.util.Map<String, String> body, Authentication auth) {
-        String photoBase64 = body.get("photoProfile");
-        return ResponseEntity.ok(ApiResponse.success("Photo de profil mise à jour",
-                userService.updateProfilePhoto(auth.getName(), photoBase64)));
-    }
-
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable String id) {
