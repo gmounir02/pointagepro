@@ -106,6 +106,15 @@ export default function ClockInOut() {
   }, [stream]);
 
   useEffect(() => {
+    if (cameraActive && stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.onloadedmetadata = () => {
+        videoRef.current.play().catch(e => console.error("Error playing video stream:", e));
+      };
+    }
+  }, [cameraActive, stream]);
+
+  useEffect(() => {
     // 1. Fetch Company Config to prefill simulator with valid coordinates
     const fetchConfig = async () => {
       try {
@@ -239,10 +248,6 @@ export default function ClockInOut() {
         video: { width: 320, height: 240, facingMode: "user" }
       });
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        videoRef.current.play();
-      }
       setCameraActive(true);
       setFaceVerificationStatus("idle");
       setCapturedPhoto("");
@@ -679,6 +684,7 @@ export default function ClockInOut() {
                       <video 
                         ref={videoRef} 
                         style={styles.cameraVideo} 
+                        autoPlay
                         playsInline 
                         muted 
                       />
