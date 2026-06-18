@@ -298,7 +298,7 @@ export default function MyHistory() {
                       {p.note || <span style={{ color: "var(--text-muted)" }}>-</span>}
                     </td>
                   </tr>
-                )))
+                ))}
               </tbody>
             </table>
           </div>
@@ -404,7 +404,7 @@ export default function MyHistory() {
                   </div>
                 )}
               </div>
-            )))
+            ))}
           </div>
         </div>
       )}
