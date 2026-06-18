@@ -220,8 +220,8 @@ public class PointageService {
             throw new AttendanceException("Vous n'êtes pas autorisé à justifier ce pointage");
         }
 
-        if (!pointage.isEnRetard()) {
-            throw new AttendanceException("Ce pointage n'a pas été marqué en retard");
+        if (!pointage.isEnRetard() && pointage.getType() != Pointage.TypePointage.ABSENCE) {
+            throw new AttendanceException("Ce pointage n'est ni en retard ni une absence à justifier");
         }
 
         pointage.setJustificationMotif(request.getMotif());
@@ -234,11 +234,12 @@ public class PointageService {
         try {
             List<User> admins = userRepository.findByRoles(User.Role.ROLE_ADMIN);
             String name = user.getFirstName() + " " + user.getLastName();
+            String label = pointage.getType() == Pointage.TypePointage.ABSENCE ? "son absence" : "son retard";
             for (User admin : admins) {
                 notificationService.createNotification(
                         admin.getId(),
                         "Nouvelle justification",
-                        name + " a soumis une justification pour son retard du " + pointage.getDate(),
+                        name + " a soumis une justification pour " + label + " du " + pointage.getDate(),
                         "NEW_JUSTIFICATION"
                 );
             }
@@ -260,14 +261,23 @@ public class PointageService {
         }
 
         pointage.setStatutJustification(statut);
+        boolean isAbsence = pointage.getType() == Pointage.TypePointage.ABSENCE;
         if ("APPROUVEE".equals(statut)) {
-            pointage.setEnRetard(false);
-            pointage.setNote(pointage.getNote() != null 
-                    ? pointage.getNote() + " (Retard justifié)" 
-                    : "Retard justifié");
-            log.info("Justification approuvée pour le pointage {}. Flag enRetard réinitialisé.", pointageId);
+            if (isAbsence) {
+                pointage.setHeuresInsuffisantes(false);
+                pointage.setNote(pointage.getNote() != null 
+                        ? pointage.getNote() + " (Absence justifiée)" 
+                        : "Absence justifiée");
+                log.info("Justification approuvée pour l'absence {}.", pointageId);
+            } else {
+                pointage.setEnRetard(false);
+                pointage.setNote(pointage.getNote() != null 
+                        ? pointage.getNote() + " (Retard justifié)" 
+                        : "Retard justifié");
+                log.info("Justification approuvée pour le retard {}. Flag enRetard réinitialisé.", pointageId);
+            }
         } else {
-            log.info("Justification rejetée pour le pointage {}.", pointageId);
+            log.info("Justification rejetée pour le pointage {} (type: {}).", pointageId, pointage.getType());
         }
 
         Pointage saved = pointageRepository.save(pointage);
@@ -276,13 +286,14 @@ public class PointageService {
         try {
             User employee = userRepository.findById(pointage.getUserId()).orElse(null);
             if (employee != null) {
+                String term = isAbsence ? "l'absence" : "le retard";
                 String title = "Justification APPROUVÉE";
-                String msg = "Votre justification pour le retard du " + pointage.getDate() + " a été acceptée par l'administrateur.";
+                String msg = "Votre justification pour " + term + " du " + pointage.getDate() + " a été acceptée par l'administrateur.";
                 String type = "JUSTIFICATION_APPROVED";
                 
                 if ("REJETEE".equals(statut)) {
                     title = "Justification REJETÉE";
-                    msg = "Votre justification pour le retard du " + pointage.getDate() + " a été refusée par l'administrateur.";
+                    msg = "Votre justification pour " + term + " du " + pointage.getDate() + " a été refusée par l'administrateur.";
                     type = "JUSTIFICATION_REJECTED";
                 }
                 
