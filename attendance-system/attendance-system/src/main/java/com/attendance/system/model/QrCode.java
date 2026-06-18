@@ -30,6 +30,11 @@ public class QrCode {
 
     private String description;
 
+    private String usedByUserId;
+    private String usedByUserEmail;
+    private String usedByUserName;
+    private LocalDateTime usedAt;
+
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expiresAt);
     }

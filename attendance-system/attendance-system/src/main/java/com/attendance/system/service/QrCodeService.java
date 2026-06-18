@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.Sort;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -86,13 +87,17 @@ public class QrCodeService {
         }
     }
 
-    // Nettoyage automatique des QR codes expirés - toutes les heures
-    @Scheduled(fixedRate = 3600000)
-    public void nettoyerQrCodesExpires() {
-        List<QrCode> expires = qrCodeRepository.findByExpiresAtBefore(LocalDateTime.now());
-        if (!expires.isEmpty()) {
-            qrCodeRepository.deleteByExpiresAtBefore(LocalDateTime.now());
-            log.info("Nettoyage: {} QR code(s) expiré(s) supprimé(s)", expires.size());
-        }
+    public List<QrCode> getHistoriqueQrCodes() {
+        return qrCodeRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
     }
+
+    // Nettoyage automatique désactivé pour conserver l'historique des codes QR expirés/utilisés
+    // @Scheduled(fixedRate = 3600000)
+    // public void nettoyerQrCodesExpires() {
+    //     List<QrCode> expires = qrCodeRepository.findByExpiresAtBefore(LocalDateTime.now());
+    //     if (!expires.isEmpty()) {
+    //         qrCodeRepository.deleteByExpiresAtBefore(LocalDateTime.now());
+    //         log.info("Nettoyage: {} QR code(s) expiré(s) supprimé(s)", expires.size());
+    //     }
+    // }
 }

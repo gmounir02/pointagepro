@@ -6,6 +6,8 @@ import { QrCode, Plus, Copy, Check, Clock, Eye, Download } from "lucide-react";
 export default function QrCodeManager() {
   const { showNotification } = useNotification();
   const [activeCodes, setActiveCodes] = useState([]);
+  const [historyCodes, setHistoryCodes] = useState([]);
+  const [activeTab, setActiveTab] = useState("actifs"); // actifs or historique
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
 
@@ -17,23 +19,28 @@ export default function QrCodeManager() {
   const [focusQr, setFocusQr] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
-  const fetchActiveCodes = async () => {
+  const fetchCodesData = async () => {
     try {
-      const data = await api.qrcodes.getActifs();
-      if (data) {
-        // Sort by expiration descending
-        const sorted = data.sort((a, b) => new Date(b.expiresAt) - new Date(a.expiresAt));
+      const activeData = await api.qrcodes.getActifs();
+      if (activeData) {
+        const sorted = activeData.sort((a, b) => new Date(b.expiresAt) - new Date(a.expiresAt));
         setActiveCodes(sorted);
       }
+      
+      const historyData = await api.qrcodes.getHistorique();
+      if (historyData) {
+        const sortedHistory = historyData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setHistoryCodes(sortedHistory);
+      }
     } catch (err) {
-      showNotification("Impossible de charger les codes QR actifs", "danger");
+      showNotification("Impossible de charger les codes QR", "danger");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchActiveCodes();
+    fetchCodesData();
   }, []);
 
   const handleGenerate = async (e) => {
@@ -50,12 +57,59 @@ export default function QrCodeManager() {
       showNotification("Nouveau Code QR généré avec succès !", "success");
       setFocusQr(newQr);
       setDescription("");
-      fetchActiveCodes();
+      fetchCodesData();
     } catch (err) {
       showNotification(err.message || "Erreur de génération du QR", "danger");
     } finally {
       setGenerating(false);
     }
+  };
+
+  const renderQrStatus = (q) => {
+    if (q.used) {
+      return (
+        <div>
+          <span style={{ 
+            fontSize: "0.7rem", 
+            background: "rgba(16, 185, 129, 0.15)", 
+            color: "var(--success)", 
+            padding: "2px 6px", 
+            borderRadius: "4px",
+            fontWeight: "600",
+            display: "inline-block", 
+            marginBottom: "4px" 
+          }}>Utilisé</span>
+          <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", lineHeight: "1.3" }}>
+            Par : <strong>{q.usedByUserName || q.usedByUserEmail}</strong>
+            <br/>
+            Le : {new Date(q.usedAt).toLocaleString("fr-FR")}
+          </div>
+        </div>
+      );
+    }
+    const isExpired = new Date(q.expiresAt) < new Date();
+    if (isExpired) {
+      return (
+        <span style={{ 
+          fontSize: "0.7rem", 
+          background: "rgba(239, 68, 68, 0.15)", 
+          color: "#f87171", 
+          padding: "2px 6px", 
+          borderRadius: "4px",
+          fontWeight: "600"
+        }}>Expiré</span>
+      );
+    }
+    return (
+      <span style={{ 
+        fontSize: "0.7rem", 
+        background: "rgba(245, 158, 11, 0.15)", 
+        color: "var(--warning)", 
+        padding: "2px 6px", 
+        borderRadius: "4px",
+        fontWeight: "600"
+      }}>Actif</span>
+    );
   };
 
   const handleCopyCode = (code, id) => {
@@ -167,79 +221,148 @@ export default function QrCodeManager() {
           )}
         </div>
 
-        {/* RIGHT COLUMN: ACTIVE LIST */}
+        {/* RIGHT COLUMN: ACTIVE LIST & HISTORY */}
         <div className="glass-card" style={styles.listCard}>
           <div style={styles.listHeader}>
-            <h3 style={styles.listTitle}>Codes QR Actifs en circulation</h3>
-            <span style={styles.countBadge}>{activeCodes.length} actifs</span>
+            <h3 style={styles.listTitle}>Gestion des QR Codes</h3>
+            <span style={styles.countBadge}>
+              {activeTab === "actifs" ? `${activeCodes.length} actifs` : `${historyCodes.length} au total`}
+            </span>
+          </div>
+
+          <div style={styles.tabContainer}>
+            <button 
+              type="button"
+              style={activeTab === "actifs" ? styles.activeTabBtn : styles.tabBtn} 
+              onClick={() => setActiveTab("actifs")}
+            >
+              En circulation ({activeCodes.length})
+            </button>
+            <button 
+              type="button"
+              style={activeTab === "historique" ? styles.activeTabBtn : styles.tabBtn} 
+              onClick={() => setActiveTab("historique")}
+            >
+              Historique Global ({historyCodes.length})
+            </button>
           </div>
 
           {loading ? (
             <div style={styles.loaderContainer}>
               <div style={styles.spinner}></div>
             </div>
-          ) : activeCodes.length === 0 ? (
-            <div style={styles.emptyContainer}>
-              <p style={styles.emptyText}>Aucun QR Code actif pour le moment.</p>
-            </div>
-          ) : (
-            <div style={styles.scrollList}>
-              <table className="custom-table" style={{ fontSize: "0.8rem" }}>
-                <thead>
-                  <tr>
-                    <th>Emplacement</th>
-                    <th>Clé UUID (Bypass)</th>
-                    <th>Expiration</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeCodes.map((q) => (
-                    <tr key={q.id}>
-                      <td style={{ fontWeight: "600", color: "#fff" }}>
-                        {q.description || "Présence"}
-                      </td>
-                      <td>
-                        <div style={styles.tableCodeRow}>
-                          <code style={{ fontSize: "0.75rem" }}>
-                            {q.code.substring(0, 8)}...
-                          </code>
+          ) : activeTab === "actifs" ? (
+            activeCodes.length === 0 ? (
+              <div style={styles.emptyContainer}>
+                <p style={styles.emptyText}>Aucun QR Code actif pour le moment.</p>
+              </div>
+            ) : (
+              <div style={styles.scrollList}>
+                <table className="custom-table" style={{ fontSize: "0.8rem" }}>
+                  <thead>
+                    <tr>
+                      <th>Emplacement</th>
+                      <th>Clé UUID (Bypass)</th>
+                      <th>Expiration</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeCodes.map((q) => (
+                      <tr key={q.id}>
+                        <td style={{ fontWeight: "600", color: "#fff" }}>
+                          {q.description || "Présence"}
+                        </td>
+                        <td>
+                          <div style={styles.tableCodeRow}>
+                            <code style={{ fontSize: "0.75rem" }}>
+                              {q.code.substring(0, 8)}...
+                            </code>
+                            <button
+                              className="btn btn-secondary"
+                              style={styles.tableCopyBtn}
+                              onClick={() => handleCopyCode(q.code, q.id)}
+                              title="Copier la clé UUID"
+                            >
+                              {copiedId === q.id ? (
+                                <Check size={12} color="var(--success)" />
+                              ) : (
+                                <Copy size={12} />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          <div style={styles.tableTimeCell}>
+                            <Clock size={12} color="var(--warning)" />
+                            <span>{formatDateTime(q.expiresAt)}</span>
+                          </div>
+                        </td>
+                        <td>
                           <button
                             className="btn btn-secondary"
-                            style={styles.tableCopyBtn}
-                            onClick={() => handleCopyCode(q.code, q.id)}
-                            title="Copier la clé UUID"
+                            style={styles.tableActionBtn}
+                            onClick={() => setFocusQr(q)}
+                            title="Afficher le QR Code"
                           >
-                            {copiedId === q.id ? (
-                              <Check size={12} color="var(--success)" />
-                            ) : (
-                              <Copy size={12} />
-                            )}
+                            <Eye size={12} />
+                            Afficher
                           </button>
-                        </div>
-                      </td>
-                      <td>
-                        <div style={styles.tableTimeCell}>
-                          <Clock size={12} color="var(--warning)" />
-                          <span>{formatDateTime(q.expiresAt)}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-secondary"
-                          style={styles.tableActionBtn}
-                          onClick={() => setFocusQr(q)}
-                          title="Afficher le QR Code"
-                        >
-                          <Eye size={12} />
-                          Afficher
-                        </button>
-                      </td>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : (
+            historyCodes.length === 0 ? (
+              <div style={styles.emptyContainer}>
+                <p style={styles.emptyText}>Aucun code QR dans l'historique.</p>
+              </div>
+            ) : (
+              <div style={styles.scrollList}>
+                <table className="custom-table" style={{ fontSize: "0.8rem" }}>
+                  <thead>
+                    <tr>
+                      <th>Emplacement</th>
+                      <th>Créé le</th>
+                      <th>Statut / Utilisation</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {historyCodes.map((q) => (
+                      <tr key={q.id}>
+                        <td style={{ fontWeight: "600", color: "#fff" }}>
+                          {q.description || "Présence"}
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "monospace" }}>
+                            {q.code.substring(0, 8)}...
+                          </div>
+                        </td>
+                        <td style={{ fontSize: "0.75rem" }}>
+                          {new Date(q.createdAt).toLocaleString("fr-FR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td>
+                          {renderQrStatus(q)}
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-secondary"
+                            style={styles.tableActionBtn}
+                            onClick={() => setFocusQr(q)}
+                            title="Afficher le QR Code"
+                          >
+                            <Eye size={12} />
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
           )}
         </div>
       </div>
@@ -251,6 +374,34 @@ const styles = {
   container: {
     maxWidth: "1000px",
     margin: "0 auto",
+  },
+  tabContainer: {
+    display: "flex",
+    gap: "10px",
+    marginBottom: "15px",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+    paddingBottom: "10px",
+  },
+  tabBtn: {
+    background: "none",
+    border: "none",
+    color: "var(--text-secondary)",
+    fontSize: "0.8rem",
+    fontWeight: "500",
+    padding: "6px 12px",
+    cursor: "pointer",
+    borderRadius: "6px",
+    transition: "all 0.2s ease",
+  },
+  activeTabBtn: {
+    background: "rgba(139, 92, 246, 0.15)",
+    border: "none",
+    color: "var(--primary-hover)",
+    fontSize: "0.8rem",
+    fontWeight: "600",
+    padding: "6px 12px",
+    cursor: "pointer",
+    borderRadius: "6px",
   },
   header: {
     display: "flex",

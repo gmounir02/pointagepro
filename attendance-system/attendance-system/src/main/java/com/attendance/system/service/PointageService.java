@@ -109,6 +109,10 @@ public class PointageService {
 
         // Marquer le QR comme utilisé
         qrCode.setUsed(true);
+        qrCode.setUsedByUserId(user.getId());
+        qrCode.setUsedByUserEmail(user.getEmail());
+        qrCode.setUsedByUserName(user.getFirstName() + " " + user.getLastName());
+        qrCode.setUsedAt(LocalDateTime.now());
         qrCodeRepository.save(qrCode);
 
         Pointage pointage = Pointage.builder()
@@ -161,6 +165,10 @@ public class PointageService {
 
         // Marquer le QR comme utilisé
         qrCode.setUsed(true);
+        qrCode.setUsedByUserId(user.getId());
+        qrCode.setUsedByUserEmail(user.getEmail());
+        qrCode.setUsedByUserName(user.getFirstName() + " " + user.getLastName());
+        qrCode.setUsedAt(LocalDateTime.now());
         qrCodeRepository.save(qrCode);
 
         // Mettre à jour le pointage d'entrée actif avec les infos de sortie

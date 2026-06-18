@@ -38,6 +38,12 @@ public class QrCodeController {
         return ResponseEntity.ok(ApiResponse.success(qrCodeService.getQrCodesActifs()));
     }
 
+    @GetMapping("/historique")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<QrCode>>> getQrCodesHistorique() {
+        return ResponseEntity.ok(ApiResponse.success(qrCodeService.getHistoriqueQrCodes()));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<QrCode>> getQrCode(@PathVariable String id) {

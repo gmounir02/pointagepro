@@ -152,6 +152,7 @@ export const api = {
       body: { validiteMinutes, description },
     }),
     getActifs: () => request("/qrcodes/actifs"),
+    getHistorique: () => request("/qrcodes/historique"),
     getById: (id) => request(`/qrcodes/${id}`),
     verify: (code) => request("/qrcodes/verify", {
       method: "POST",
