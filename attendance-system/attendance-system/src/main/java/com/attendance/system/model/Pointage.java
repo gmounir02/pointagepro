@@ -63,6 +63,7 @@ public class Pointage {
 
     public enum TypePointage {
         ENTREE,
-        SORTIE
+        SORTIE,
+        ABSENCE
     }
 }

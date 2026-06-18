@@ -29,6 +29,7 @@ public class PointageService {
     private final QrCodeRepository qrCodeRepository;
     private final EntrepriseConfigRepository configRepository;
     private final NotificationService notificationService;
+    private final CongeRepository congeRepository;
 
     @Value("${app.work.start-hour:8}")
     private int workStartHour;
@@ -297,5 +298,52 @@ public class PointageService {
         }
 
         return saved;
+    }
+
+    public void marquerAbsences(LocalDate date) {
+        log.info("Début du traitement des absences automatiques pour le {}", date);
+        List<User> employes = userRepository.findByRoles(User.Role.ROLE_EMPLOYE);
+        
+        for (User emp : employes) {
+            if (!emp.isActive()) {
+                continue;
+            }
+            
+            // 1. Vérifier si l'employé a déjà un pointage (Entrée ou Sortie ou Absence) pour ce jour
+            List<Pointage> pointagesDuJour = pointageRepository.findByUserIdAndDate(emp.getId(), date);
+            if (!pointagesDuJour.isEmpty()) {
+                continue; // Déjà pointé ou déjà marqué absent
+            }
+            
+            // 2. Vérifier s'il a un congé approuvé pour ce jour
+            List<Conge> congesDuJour = congeRepository.findActiveCongeForUserOnDate(emp.getId(), date);
+            boolean enConge = congesDuJour.stream()
+                    .anyMatch(c -> c.getStatut() == Conge.StatutConge.APPROUVE);
+            if (enConge) {
+                continue; // En congé approuvé, donc pas absent injustifié
+            }
+            
+            // 3. Créer une absence automatique
+            Pointage absence = Pointage.builder()
+                    .userId(emp.getId())
+                    .userFullName(emp.getFirstName() + " " + emp.getLastName())
+                    .date(date)
+                    .type(Pointage.TypePointage.ABSENCE)
+                    .statutJustification("NON_JUSTIFIE")
+                    .note("Absence automatique - Non pointé")
+                    .enRetard(false)
+                    .sortieAnticipee(false)
+                    .heuresInsuffisantes(true)
+                    .build();
+                    
+            pointageRepository.save(absence);
+            log.info("Absence enregistrée pour {} ({}) le {}", emp.getEmail(), emp.getId(), date);
+        }
+        log.info("Fin du traitement des absences automatiques.");
+    }
+
+    @org.springframework.scheduling.annotation.Scheduled(cron = "0 59 23 * * *")
+    public void scheduledMarquerAbsences() {
+        marquerAbsences(LocalDate.now());
     }
 }

@@ -118,6 +118,8 @@ export const api = {
       request(`/pointages/${id}/evaluer-justification`, { method: "PATCH", body: { statut } }),
     getJustificationsEnAttente: () =>
       request("/pointages/justifications/en-attente"),
+    genererAbsences: (date) => 
+      request(`/pointages/generer-absences${date ? `?date=${date}` : ""}`, { method: "POST" }),
   },
 
   // Congés (Leave requests)

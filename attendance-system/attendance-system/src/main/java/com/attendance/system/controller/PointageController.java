@@ -90,4 +90,13 @@ public class PointageController {
     public ResponseEntity<ApiResponse<List<Pointage>>> getJustificationsEnAttente() {
         return ResponseEntity.ok(ApiResponse.success(pointageService.getJustificationsEnAttente()));
     }
+
+    @PostMapping("/generer-absences")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<String>> genererAbsences(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        LocalDate targetDate = date != null ? date : LocalDate.now();
+        pointageService.marquerAbsences(targetDate);
+        return ResponseEntity.ok(ApiResponse.success("Absences automatiques traitées pour le " + targetDate, null));
+    }
 }

@@ -247,47 +247,69 @@ export default function DashboardHome() {
         let checkOut = null;
 
         if (empPointages.length > 0) {
-          // Sort by heureEntree ascending to find first and last
-          const sorted = [...empPointages].sort((a, b) => new Date(a.heureEntree) - new Date(b.heureEntree));
+          // Check if all pointages are ABSENCE type
+          const isAbsenceOnly = empPointages.every(p => p.type === "ABSENCE");
           
-          checkIn = sorted[0].heureEntree;
-          
-          // Find last exit (or if they are currently inside)
-          const isCurrentlyInside = sorted.some(p => p.heureSortie === null);
-          const wasLate = sorted[0].enRetard;
-
-          if (isCurrentlyInside) {
-            status = wasLate ? "LATE" : "PRESENT";
-            checkOut = null;
+          if (isAbsenceOnly) {
+            // Employee was auto-marked absent
+            const record = {
+              id: emp.id,
+              fullName: `${emp.firstName} ${emp.lastName}`,
+              department: emp.department || "-",
+              poste: emp.poste || "-",
+              email: emp.email,
+              status: "ABSENT",
+              checkIn: null,
+              checkOut: null,
+              note: empPointages[0].note || "Absence automatique"
+            };
+            absentList.push(record);
+            allList.push(record);
           } else {
-            status = "PRESENT";
-            checkOut = sorted[sorted.length - 1].heureSortie;
-          }
-          
-          const record = {
-            id: emp.id,
-            fullName: `${emp.firstName} ${emp.lastName}`,
-            department: emp.department || "-",
-            poste: emp.poste || "-",
-            email: emp.email,
-            status,
-            isCurrentlyInside,
-            checkIn,
-            checkOut,
-            enRetard: sorted.some(p => p.enRetard),
-            sortieAnticipee: sorted.some(p => p.sortieAnticipee),
-            heuresInsuffisantes: sorted.some(p => p.heuresInsuffisantes),
-            note: sorted[sorted.length - 1].note,
-            photoEntree: sorted[0].photoEntree || null,
-            photoSortie: sorted[sorted.length - 1].photoSortie || null
-          };
+            // Filter out ABSENCE records, keep real pointages
+            const realPointages = empPointages.filter(p => p.type !== "ABSENCE");
+            // Sort by heureEntree ascending to find first and last
+            const sorted = [...realPointages].sort((a, b) => new Date(a.heureEntree) - new Date(b.heureEntree));
+            
+            checkIn = sorted[0].heureEntree;
+            
+            // Find last exit (or if they are currently inside)
+            const isCurrentlyInside = sorted.some(p => p.heureSortie === null);
+            const wasLate = sorted[0].enRetard;
 
-          if (wasLate) {
-            lateList.push(record);
-          } else {
-            presentList.push(record);
+            if (isCurrentlyInside) {
+              status = wasLate ? "LATE" : "PRESENT";
+              checkOut = null;
+            } else {
+              status = "PRESENT";
+              checkOut = sorted[sorted.length - 1].heureSortie;
+            }
+            
+            const record = {
+              id: emp.id,
+              fullName: `${emp.firstName} ${emp.lastName}`,
+              department: emp.department || "-",
+              poste: emp.poste || "-",
+              email: emp.email,
+              status,
+              isCurrentlyInside,
+              checkIn,
+              checkOut,
+              enRetard: sorted.some(p => p.enRetard),
+              sortieAnticipee: sorted.some(p => p.sortieAnticipee),
+              heuresInsuffisantes: sorted.some(p => p.heuresInsuffisantes),
+              note: sorted[sorted.length - 1].note,
+              photoEntree: sorted[0].photoEntree || null,
+              photoSortie: sorted[sorted.length - 1].photoSortie || null
+            };
+
+            if (wasLate) {
+              lateList.push(record);
+            } else {
+              presentList.push(record);
+            }
+            allList.push(record);
           }
-          allList.push(record);
         } else {
           const record = {
             id: emp.id,
