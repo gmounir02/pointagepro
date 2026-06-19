@@ -32,6 +32,8 @@ public class QrCode {
 
     private boolean faceVerificationRequired; // true si la reconnaissance faciale est obligatoire
 
+    // usedByUserId/Email/Name track the LAST employee who scanned this code.
+    // They are metadata only and do NOT block re-use by other employees.
     private String usedByUserId;
     private String usedByUserEmail;
     private String usedByUserName;
@@ -42,6 +44,8 @@ public class QrCode {
     }
 
     public boolean isValid() {
-        return !used && !isExpired();
+        // A QR code is a shared scan point: valid until it expires.
+        // Multiple employees can scan it within its validity window.
+        return !isExpired();
     }
 }

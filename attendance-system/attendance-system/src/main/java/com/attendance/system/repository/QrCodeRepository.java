@@ -15,6 +15,10 @@ public interface QrCodeRepository extends MongoRepository<QrCode, String> {
 
     List<QrCode> findByUsedFalseAndExpiresAtAfter(LocalDateTime now);
 
+    // Fetch all QR codes that are still within their validity window, regardless of scan count.
+    // A QR code is a shared scan point usable by multiple employees until it expires.
+    List<QrCode> findByExpiresAtAfter(LocalDateTime now);
+
     List<QrCode> findByExpiresAtBefore(LocalDateTime now);
 
     void deleteByExpiresAtBefore(LocalDateTime now);

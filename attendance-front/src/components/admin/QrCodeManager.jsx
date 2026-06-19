@@ -68,49 +68,52 @@ export default function QrCodeManager() {
   };
 
   const renderQrStatus = (q) => {
-    if (q.used) {
+    const isExpired = new Date(q.expiresAt) < new Date();
+    if (isExpired) {
       return (
         <div>
           <span style={{ 
             fontSize: "0.7rem", 
-            background: "rgba(16, 185, 129, 0.15)", 
-            color: "var(--success)", 
+            background: "rgba(239, 68, 68, 0.15)", 
+            color: "#f87171", 
             padding: "2px 6px", 
             borderRadius: "4px",
             fontWeight: "600",
-            display: "inline-block", 
-            marginBottom: "4px" 
-          }}>Utilisé</span>
-          <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", lineHeight: "1.3" }}>
-            Par : <strong>{q.usedByUserName || q.usedByUserEmail}</strong>
-            <br/>
-            Le : {new Date(q.usedAt).toLocaleString("fr-FR")}
-          </div>
+            display: "inline-block",
+            marginBottom: q.used ? "4px" : 0
+          }}>Expiré</span>
+          {q.used && (
+            <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", lineHeight: "1.3" }}>
+              Dernier scan par : <strong>{q.usedByUserName || q.usedByUserEmail}</strong>
+            </div>
+          )}
         </div>
       );
     }
-    const isExpired = new Date(q.expiresAt) < new Date();
-    if (isExpired) {
-      return (
+    // Still active (not expired)
+    return (
+      <div>
         <span style={{ 
           fontSize: "0.7rem", 
-          background: "rgba(239, 68, 68, 0.15)", 
-          color: "#f87171", 
+          background: "rgba(245, 158, 11, 0.15)", 
+          color: "var(--warning)", 
           padding: "2px 6px", 
           borderRadius: "4px",
-          fontWeight: "600"
-        }}>Expiré</span>
-      );
-    }
-    return (
-      <span style={{ 
-        fontSize: "0.7rem", 
-        background: "rgba(245, 158, 11, 0.15)", 
-        color: "var(--warning)", 
-        padding: "2px 6px", 
-        borderRadius: "4px",
-        fontWeight: "600"
-      }}>Actif</span>
+          fontWeight: "600",
+          display: "inline-block",
+          marginBottom: q.used ? "4px" : 0
+        }}>En cours</span>
+        {q.used && (
+          <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", lineHeight: "1.3" }}>
+            Dernier scan : <strong>{q.usedByUserName || q.usedByUserEmail}</strong>
+            <br/>
+            à {new Date(q.usedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+          </div>
+        )}
+        {!q.used && (
+          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>Pas encore scanné</div>
+        )}
+      </div>
     );
   };
 

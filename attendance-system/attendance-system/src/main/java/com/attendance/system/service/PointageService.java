@@ -51,9 +51,7 @@ public class PointageService {
                 .orElseThrow(() -> new AttendanceException("QR code invalide ou introuvable"));
 
         if (!qrCode.isValid()) {
-            throw new AttendanceException(qrCode.isExpired()
-                    ? "QR code expiré"
-                    : "QR code déjà utilisé");
+            throw new AttendanceException("QR code expiré ou invalide");
         }
 
         // 3. Valider la position GPS
@@ -109,13 +107,14 @@ public class PointageService {
             enRetard = now.toLocalTime().isAfter(heureLimit);
         }
 
-        // Marquer le QR comme utilisé
+        // Enregistrer le dernier employé ayant scanné ce QR (métadonnée, ne bloque pas le re-scan)
         qrCode.setUsed(true);
         qrCode.setUsedByUserId(user.getId());
         qrCode.setUsedByUserEmail(user.getEmail());
         qrCode.setUsedByUserName(user.getFirstName() + " " + user.getLastName());
         qrCode.setUsedAt(LocalDateTime.now());
         qrCodeRepository.save(qrCode);
+        // Note: isValid() only checks expiry, so this QR remains usable by other employees.
 
         Pointage pointage = Pointage.builder()
                 .userId(user.getId())
@@ -165,13 +164,14 @@ public class PointageService {
                 .sum() + dureeMinutes;
         boolean heuresInsuffisantes = totalDureeMinutesAujourdHui < 480; // seuil de 8 heures (480 minutes)
 
-        // Marquer le QR comme utilisé
+        // Enregistrer le dernier employé ayant scanné ce QR (métadonnée, ne bloque pas le re-scan)
         qrCode.setUsed(true);
         qrCode.setUsedByUserId(user.getId());
         qrCode.setUsedByUserEmail(user.getEmail());
         qrCode.setUsedByUserName(user.getFirstName() + " " + user.getLastName());
         qrCode.setUsedAt(LocalDateTime.now());
         qrCodeRepository.save(qrCode);
+        // Note: isValid() only checks expiry, so this QR remains usable by other employees.
 
         // Mettre à jour le pointage d'entrée actif avec les infos de sortie
         activePointage.setHeureSortie(now);

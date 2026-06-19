@@ -65,7 +65,8 @@ public class QrCodeService {
     }
 
     public List<QrCode> getQrCodesActifs() {
-        return qrCodeRepository.findByUsedFalseAndExpiresAtAfter(LocalDateTime.now());
+        // A QR code stays active as long as it hasn't expired, regardless of how many employees scanned it.
+        return qrCodeRepository.findByExpiresAtAfter(LocalDateTime.now());
     }
 
     public QrCode getQrCodeById(String id) {
