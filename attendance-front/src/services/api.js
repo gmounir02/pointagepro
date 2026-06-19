@@ -1,4 +1,6 @@
-const API_BASE_URL = `http://${window.location.hostname}:8082/api`;
+const API_BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+  ? `http://${window.location.hostname}:8082/api`
+  : `https://pointagepro-ml6w.onrender.com/api`;
 
 /**
  * Common request wrapper to inject headers and handle JSON responses
