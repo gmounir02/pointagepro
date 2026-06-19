@@ -56,6 +56,7 @@ public class QrCodeService {
                 .used(false)
                 .createdByAdminId(admin.getId())
                 .description(request.getDescription())
+                .faceVerificationRequired(request.getFaceVerificationRequired() != null ? request.getFaceVerificationRequired() : false)
                 .build();
 
         qrCodeRepository.save(qrCode);
@@ -76,6 +77,10 @@ public class QrCodeService {
         return qrCodeRepository.findByCode(code)
                 .map(QrCode::isValid)
                 .orElse(false);
+    }
+
+    public QrCode getQrCodeDetailsByCode(String code) {
+        return qrCodeRepository.findByCode(code).orElse(null);
     }
 
     private String genererImageQr(String content) {
@@ -132,6 +137,7 @@ public class QrCodeService {
                     .used(false)
                     .createdByAdminId("SYSTEM")
                     .description("QR automatique du " + LocalDate.now() + " (expire à " + expiration.toLocalTime() + ")")
+                    .faceVerificationRequired(true)
                     .build();
 
             qrCodeRepository.save(qrCode);

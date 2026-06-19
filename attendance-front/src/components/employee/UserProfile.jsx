@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { useAuth, useNotification } from "../../context/GlobalContext";
 import { api } from "../../services/api";
-import { useNotification } from "../../context/GlobalContext";
-import { User, Mail, Phone, Briefcase, Network, ToggleLeft, Calendar, ShieldCheck } from "lucide-react";
+import { User, Mail, Phone, Briefcase, Network, ToggleLeft, Calendar, ShieldCheck, LogOut } from "lucide-react";
 
 export default function UserProfile() {
   const { showNotification } = useNotification();
+  const { logout } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -46,7 +47,7 @@ export default function UserProfile() {
           <p>Une erreur est survenue lors de la récupération de vos données de profil.</p>
         </div>
       ) : (
-        <div className="glass-card" style={styles.profileCard}>
+        <div className="glass-card profile-card" style={styles.profileCard}>
           {/* Avatar Area */}
           <div style={styles.avatarSection}>
             <div style={styles.avatarGlow}></div>
@@ -89,7 +90,7 @@ export default function UserProfile() {
           </div>
 
           {/* Details Section */}
-          <div style={styles.detailsGrid}>
+          <div className="profile-details-grid" style={styles.detailsGrid}>
             <div style={styles.detailItem}>
               <Mail size={18} color="var(--primary)" />
               <div style={styles.detailText}>
@@ -122,7 +123,7 @@ export default function UserProfile() {
               </div>
             </div>
 
-            <div style={{ ...styles.detailItem, gridColumn: "span 2" }}>
+            <div className="profile-detail-item-wide" style={styles.detailItem}>
               <Calendar size={18} color="var(--primary)" />
               <div style={styles.detailText}>
                 <div style={styles.detailLabel}>Membre depuis le</div>
@@ -132,6 +133,26 @@ export default function UserProfile() {
               </div>
             </div>
           </div>
+
+          <button 
+            onClick={logout} 
+            className="btn btn-danger" 
+            style={{ 
+              marginTop: "24px", 
+              width: "100%", 
+              maxWidth: "240px", 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              gap: "8px", 
+              padding: "12px", 
+              fontWeight: "600",
+              borderRadius: "10px"
+            }}
+          >
+            <LogOut size={16} />
+            Déconnexion
+          </button>
         </div>
       )}
     </div>
@@ -267,9 +288,25 @@ const styles = {
 if (typeof document !== "undefined") {
   const style = document.createElement("style");
   style.innerHTML = `
+    .profile-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: 100%;
+    }
+    .profile-detail-item-wide {
+      grid-column: span 2;
+    }
     @media (max-width: 768px) {
-      div[style*="grid-template-columns: 1fr 1fr"] {
+      .profile-card {
+        padding: 20px 16px !important;
+      }
+      .profile-details-grid {
         grid-template-columns: 1fr !important;
+        gap: 16px !important;
+      }
+      .profile-detail-item-wide {
+        grid-column: span 1 !important;
       }
     }
   `;

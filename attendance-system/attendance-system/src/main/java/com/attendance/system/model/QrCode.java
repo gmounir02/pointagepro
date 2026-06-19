@@ -30,6 +30,8 @@ public class QrCode {
 
     private String description;
 
+    private boolean faceVerificationRequired; // true si la reconnaissance faciale est obligatoire
+
     private String usedByUserId;
     private String usedByUserEmail;
     private String usedByUserName;

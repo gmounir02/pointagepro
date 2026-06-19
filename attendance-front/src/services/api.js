@@ -151,9 +151,9 @@ export const api = {
 
   // QR Codes
   qrcodes: {
-    generer: (validiteMinutes, description) => request("/qrcodes/generate", {
+    generer: (validiteMinutes, description, faceVerificationRequired) => request("/qrcodes/generate", {
       method: "POST",
-      body: { validiteMinutes, description },
+      body: { validiteMinutes, description, faceVerificationRequired },
     }),
     getActifs: () => request("/qrcodes/actifs"),
     getHistorique: () => request("/qrcodes/historique"),

@@ -51,9 +51,15 @@ public class QrCodeController {
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<ApiResponse<Map<String, Boolean>>> verifierQrCode(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> verifierQrCode(
             @RequestBody Map<String, String> body) {
-        boolean valide = qrCodeService.verifierQrCode(body.get("code"));
-        return ResponseEntity.ok(ApiResponse.success(Map.of("valid", valide)));
+        QrCode qrCode = qrCodeService.getQrCodeDetailsByCode(body.get("code"));
+        boolean valid = qrCode != null && qrCode.isValid();
+        boolean faceVerificationRequired = qrCode != null && qrCode.isFaceVerificationRequired();
+        
+        return ResponseEntity.ok(ApiResponse.success(Map.of(
+                "valid", valid,
+                "faceVerificationRequired", faceVerificationRequired
+        )));
     }
 }

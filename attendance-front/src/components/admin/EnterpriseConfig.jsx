@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../../services/api";
 import { useNotification } from "../../context/GlobalContext";
-import { Settings, Save, MapPin, Compass, Clock, Building, Sparkles } from "lucide-react";
+import { Settings, Save, MapPin, Compass, Clock, Building, Sparkles, LogOut } from "lucide-react";
+import { useAuth } from "../../context/GlobalContext";
 
 export default function EnterpriseConfig() {
   const { showNotification } = useNotification();
+  const { logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -284,6 +286,30 @@ export default function EnterpriseConfig() {
             <div style={styles.tipBlock}>
               💡 <strong>Conseil de Test :</strong> Pour valider facilement les scans depuis votre bureau sans bouger, vous pouvez copier les coordonnées de votre bureau actuel (via le bouton capturer) ou utiliser les coordonnées factices du simulateur sur le widget de pointage !
             </div>
+          </div>
+
+          <div className="glass-card" style={{ ...styles.helpCard, borderColor: "rgba(244, 63, 94, 0.15)", background: "rgba(244, 63, 94, 0.01)" }}>
+            <h3 style={{ ...styles.helpTitle, borderBottomColor: "rgba(244, 63, 94, 0.1)" }}>Gestion de Session</h3>
+            <p style={styles.helpDesc}>
+              Vous êtes connecté en tant qu'administrateur.
+            </p>
+            <button 
+              onClick={logout} 
+              className="btn btn-danger" 
+              style={{ 
+                width: "100%", 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center", 
+                gap: "8px", 
+                padding: "12px", 
+                fontWeight: "600",
+                borderRadius: "10px"
+              }}
+            >
+              <LogOut size={16} />
+              Déconnexion
+            </button>
           </div>
         </div>
       </div>

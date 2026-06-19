@@ -191,13 +191,10 @@ export default function Layout({ activeTab, setActiveTab, children }) {
               user?.fullName?.charAt(0) || "U"
             )}
           </div>
-          <div style={styles.userInfo}>
+          <div style={{ ...styles.userInfo, marginRight: 0 }}>
             <div style={styles.userName}>{user?.fullName}</div>
             <div style={styles.userRole}>{isAdmin ? "Administrateur" : "Employé"}</div>
           </div>
-          <button style={styles.logoutBtn} onClick={logout} title="Déconnexion">
-            <LogOut size={18} color="var(--danger)" />
-          </button>
         </div>
       </aside>
 
@@ -304,10 +301,6 @@ export default function Layout({ activeTab, setActiveTab, children }) {
                 </span>
               )}
             </button>
-
-            <button style={styles.mobileLogoutBtn} onClick={logout}>
-              <LogOut size={16} color="var(--danger)" />
-            </button>
           </div>
         </header>
 
@@ -316,14 +309,14 @@ export default function Layout({ activeTab, setActiveTab, children }) {
           {children}
         </main>
 
-        {/* Mobile bottom nav bar */}
-        <nav style={styles.mobileBottomNav}>
+        <nav style={styles.mobileBottomNav} className="mobile-bottom-nav">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
+                className="mobile-nav-item"
                 style={{
                   ...styles.mobileNavItem,
                   color: isActive ? "var(--primary)" : "var(--text-secondary)",
@@ -331,7 +324,7 @@ export default function Layout({ activeTab, setActiveTab, children }) {
                 onClick={() => setActiveTab(item.id)}
               >
                 <Icon size={22} style={isActive ? styles.mobileIconActive : {}} />
-                <span style={styles.mobileNavLabel}>{item.label}</span>
+                <span className="mobile-nav-label" style={styles.mobileNavLabel}>{item.label}</span>
               </button>
             );
           })}
@@ -683,8 +676,17 @@ if (typeof document !== "undefined") {
       header[style*="display: none"] {
         display: flex !important;
       }
-      nav[style*="display: none"] {
+      nav[style*="display: none"], .mobile-bottom-nav {
         display: grid !important;
+        height: 56px !important;
+      }
+      .mobile-nav-label {
+        display: none !important;
+      }
+      .mobile-nav-item {
+        padding: 0 !important;
+        height: 100% !important;
+        justify-content: center !important;
       }
     }
   `;

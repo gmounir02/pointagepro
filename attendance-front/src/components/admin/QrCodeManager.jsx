@@ -14,6 +14,7 @@ export default function QrCodeManager() {
   // Form State
   const [validite, setValidite] = useState("15");
   const [description, setDescription] = useState("");
+  const [faceRequired, setFaceRequired] = useState(true);
 
   // Focus View State
   const [focusQr, setFocusQr] = useState(null);
@@ -53,10 +54,11 @@ export default function QrCodeManager() {
 
     setGenerating(true);
     try {
-      const newQr = await api.qrcodes.generer(parseInt(validite), description || "Code QR de présence");
+      const newQr = await api.qrcodes.generer(parseInt(validite), description || "Code QR de présence", faceRequired);
       showNotification("Nouveau Code QR généré avec succès !", "success");
       setFocusQr(newQr);
       setDescription("");
+      setFaceRequired(true);
       fetchCodesData();
     } catch (err) {
       showNotification(err.message || "Erreur de génération du QR", "danger");
@@ -174,6 +176,20 @@ export default function QrCodeManager() {
                 />
               </div>
 
+              <div className="input-group" style={{ display: "flex", alignItems: "center", gap: "10px", flexDirection: "row", cursor: "pointer", marginTop: "10px", marginBottom: "15px" }}>
+                <input
+                  type="checkbox"
+                  id="faceRequired"
+                  checked={faceRequired}
+                  onChange={(e) => setFaceRequired(e.target.checked)}
+                  disabled={generating}
+                  style={{ width: "18px", height: "18px", accentColor: "var(--primary)" }}
+                />
+                <label htmlFor="faceRequired" className="input-label" style={{ marginBottom: 0, cursor: "pointer", color: "#fff", fontSize: "0.85rem" }}>
+                  Reconnaissance faciale obligatoire
+                </label>
+              </div>
+
               <button
                 type="submit"
                 className="btn btn-primary"
@@ -189,7 +205,22 @@ export default function QrCodeManager() {
           {focusQr && (
             <div className="glass-card" style={styles.focusCard}>
               <h3 style={styles.focusTitle}>Code QR de Présence Actif</h3>
-              <p style={styles.focusDesc}>{focusQr.description || "Généré à l'instant"}</p>
+              <p style={styles.focusDesc}>
+                {focusQr.description || "Généré à l'instant"}
+                <br />
+                <span style={{ 
+                  display: "inline-block", 
+                  marginTop: "8px", 
+                  fontSize: "0.75rem", 
+                  padding: "4px 8px", 
+                  borderRadius: "4px",
+                  background: focusQr.faceVerificationRequired ? "rgba(245, 158, 11, 0.15)" : "rgba(59, 130, 246, 0.15)",
+                  color: focusQr.faceVerificationRequired ? "var(--warning)" : "var(--primary-hover)",
+                  fontWeight: "600"
+                }}>
+                  {focusQr.faceVerificationRequired ? "🔒 Reconnaissance faciale obligatoire" : "🔓 Sans reconnaissance faciale"}
+                </span>
+              </p>
               
               <div style={styles.qrWrapper}>
                 <img
@@ -272,6 +303,9 @@ export default function QrCodeManager() {
                       <tr key={q.id}>
                         <td style={{ fontWeight: "600", color: "#fff" }}>
                           {q.description || "Présence"}
+                          <div style={{ fontSize: "0.68rem", color: q.faceVerificationRequired ? "var(--warning)" : "var(--primary-hover)", marginTop: "2px", fontWeight: "normal" }}>
+                            {q.faceVerificationRequired ? "🔒 Visage Obligatoire" : "🔓 Visage Optionnel"}
+                          </div>
                         </td>
                         <td>
                           <div style={styles.tableCodeRow}>
@@ -336,7 +370,10 @@ export default function QrCodeManager() {
                       <tr key={q.id}>
                         <td style={{ fontWeight: "600", color: "#fff" }}>
                           {q.description || "Présence"}
-                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "monospace" }}>
+                          <div style={{ fontSize: "0.68rem", color: q.faceVerificationRequired ? "var(--warning)" : "var(--primary-hover)", marginTop: "2px", fontWeight: "normal" }}>
+                            {q.faceVerificationRequired ? "🔒 Visage Obligatoire" : "🔓 Visage Optionnel"}
+                          </div>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "monospace", marginTop: "2px" }}>
                             {q.code.substring(0, 8)}...
                           </div>
                         </td>

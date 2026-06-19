@@ -51,6 +51,7 @@ export default function ClockInOut() {
   const [faceMatchConfidence, setFaceMatchConfidence] = useState(0);
   const [stream, setStream] = useState(null);
   const [verifyingFace, setVerifyingFace] = useState(false);
+  const [faceRequired, setFaceRequired] = useState(true);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -97,6 +98,35 @@ export default function ClockInOut() {
     };
     loadModels();
   }, []);
+
+  useEffect(() => {
+    if (qrCode && qrCode.trim().length > 10) {
+      const verifyQr = async () => {
+        try {
+          const res = await api.qrcodes.verify(qrCode.trim());
+          if (res && res.valid) {
+            setFaceRequired(res.faceVerificationRequired);
+            if (res.faceVerificationRequired) {
+              if (!cameraActive) {
+                startCamera();
+              }
+            } else {
+              stopCamera();
+            }
+          } else {
+            setFaceRequired(true);
+          }
+        } catch (err) {
+          console.error("Error verifying scanned QR code:", err);
+          setFaceRequired(true);
+        }
+      };
+      verifyQr();
+    } else {
+      setFaceRequired(true);
+      stopCamera();
+    }
+  }, [qrCode]);
 
   useEffect(() => {
     return () => {
@@ -196,7 +226,8 @@ export default function ClockInOut() {
       try {
         const scanner = new Html5QrcodeScanner("qr-reader", {
           fps: 10,
-          qrbox: { width: 200, height: 200 }
+          qrbox: { width: 200, height: 200 },
+          videoConstraints: { facingMode: "environment" }
         });
         
         scanner.render(
@@ -220,19 +251,8 @@ export default function ClockInOut() {
 
   const handleStartScanner = () => {
     if (scannerActive) return;
-    
-    // Trigger Simulated Biometric authentication overlay first
-    setShowBiometricModal(true);
-    setBiometricStatus("scanning");
-    
-    setTimeout(() => {
-      setBiometricStatus("success");
-      setTimeout(() => {
-        setShowBiometricModal(false);
-        setScannerActive(true);
-        startRealScanner();
-      }, 1000);
-    }, 2000);
+    setScannerActive(true);
+    startRealScanner();
   };
 
   const handleStopScanner = () => {
@@ -362,34 +382,70 @@ export default function ClockInOut() {
       return;
     }
 
-    // Camera checkpoint
-    let snapshotBase64 = "";
-    if (cameraActive) {
-      if (videoRef.current && canvasRef.current) {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        canvas.width = video.videoWidth || 320;
-        canvas.height = video.videoHeight || 240;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        snapshotBase64 = canvas.toDataURL("image/jpeg");
-        setCapturedPhoto(snapshotBase64);
-
-        // Perform face recognition matching!
-        setVerifyingFace(true);
-        const matchResult = await runFaceMatching(snapshotBase64);
-        setVerifyingFace(false);
-        if (!matchResult) {
-          return; // Stop checkout/checkin if facial recognition failed
-        }
-      }
-    } else {
-      showNotification("La caméra est obligatoire pour le pointage photo.", "danger");
-      return;
-    }
-
     setSubmitting(true);
     try {
+      // 1. Verify code and check if face matching is mandatory
+      let targetFaceRequired = faceRequired;
+      try {
+        const verifyRes = await api.qrcodes.verify(qrCode.trim());
+        if (!verifyRes || !verifyRes.valid) {
+          showNotification("Le code QR ou UUID saisi est invalide ou expiré.", "danger");
+          setSubmitting(false);
+          return;
+        }
+        targetFaceRequired = verifyRes.faceVerificationRequired;
+      } catch (err) {
+        showNotification("Impossible de valider le code QR auprès du serveur.", "danger");
+        setSubmitting(false);
+        return;
+      }
+
+      // Camera checkpoint
+      let snapshotBase64 = "";
+      if (targetFaceRequired) {
+        if (cameraActive) {
+          if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth || 320;
+            canvas.height = video.videoHeight || 240;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            snapshotBase64 = canvas.toDataURL("image/jpeg");
+            setCapturedPhoto(snapshotBase64);
+
+            // Perform face recognition matching!
+            setVerifyingFace(true);
+            const matchResult = await runFaceMatching(snapshotBase64);
+            setVerifyingFace(false);
+            if (!matchResult) {
+              setSubmitting(false);
+              return; // Stop checkout/checkin if facial recognition failed
+            }
+          } else {
+            showNotification("La caméra n'est pas prête. Veuillez réessayer.", "danger");
+            setSubmitting(false);
+            return;
+          }
+        } else {
+          showNotification("La caméra est obligatoire pour le pointage photo.", "danger");
+          setSubmitting(false);
+          return;
+        }
+      } else {
+        // Optionnel: capture if active, otherwise don't block
+        if (cameraActive && videoRef.current && canvasRef.current) {
+          const video = videoRef.current;
+          const canvas = canvasRef.current;
+          canvas.width = video.videoWidth || 320;
+          canvas.height = video.videoHeight || 240;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          snapshotBase64 = canvas.toDataURL("image/jpeg");
+          setCapturedPhoto(snapshotBase64);
+        }
+      }
+
       const response = await api.pointages.pointer({
         qrCode,
         latitude: currentLat,
@@ -637,18 +693,19 @@ export default function ClockInOut() {
             )}
 
             {/* 📷 WEBCAM PHOTO VERIFICATION CARD */}
-            <div className="glass-card" style={styles.webcamCard}>
-              <div style={styles.webcamHeader}>
-                <Camera size={18} color="var(--primary)" />
-                <span style={styles.webcamTitle}>Vérification Faciale Obligatoire</span>
-                {modelsLoaded ? (
-                  <span className="badge badge-success" style={{ fontSize: "0.65rem" }}>Système Prêt</span>
-                ) : faceApiError ? (
-                  <span className="badge badge-warning" style={{ fontSize: "0.65rem" }}>Mode Secours</span>
-                ) : (
-                  <span className="badge badge-info" style={{ fontSize: "0.65rem" }}>Chargement IA...</span>
-                )}
-              </div>
+            {faceRequired && (
+              <div className="glass-card" style={styles.webcamCard}>
+                <div style={styles.webcamHeader}>
+                  <Camera size={18} color="var(--primary)" />
+                  <span style={styles.webcamTitle}>Vérification Faciale Obligatoire</span>
+                  {modelsLoaded ? (
+                    <span className="badge badge-success" style={{ fontSize: "0.65rem" }}>Système Prêt</span>
+                  ) : faceApiError ? (
+                    <span className="badge badge-warning" style={{ fontSize: "0.65rem" }}>Mode Secours</span>
+                  ) : (
+                    <span className="badge badge-info" style={{ fontSize: "0.65rem" }}>Chargement IA...</span>
+                  )}
+                </div>
 
               {!cameraActive ? (
                 <div style={styles.cameraPlaceholder} onClick={startCamera}>
@@ -738,17 +795,18 @@ export default function ClockInOut() {
                     )}
                   </div>
 
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    onClick={stopCamera}
-                    style={{ width: "100%", marginTop: "12px", padding: "8px" }}
-                  >
-                    Arrêter la caméra
-                  </button>
-                </div>
-              )}
-            </div>
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      onClick={stopCamera}
+                      style={{ width: "100%", marginTop: "12px", padding: "8px" }}
+                    >
+                      Arrêter la caméra
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Check-in Note */}
             <div className="input-group">
@@ -1188,6 +1246,7 @@ const styles = {
     objectFit: "cover",
     border: "1px solid var(--border-color)",
     background: "#000",
+    transform: "scaleX(-1)",
   },
   noPhotoPlaceholder: {
     height: "140px",

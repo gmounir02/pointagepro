@@ -10,4 +10,6 @@ public class QrCodeRequest {
 
     @NotNull(message = "La durée de validité est obligatoire")
     private Integer validiteMinutes; // durée de validité en minutes (ex: 60)
+
+    private Boolean faceVerificationRequired; // true si obligatoire
 }
