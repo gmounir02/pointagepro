@@ -215,9 +215,18 @@ public class PointageService {
                 : LocalDate.now().minusDays(30);
         LocalDate endDate = LocalDate.now();
         
+        // Récupérer l'heure de fin de travail configurée (ex: 17:30).
+        // Un employé n'est marqué absent AUJOURD'HUI qu'après cette heure.
+        // Avant cette heure, la journée est encore en cours : pas d'absence prématurée.
+        EntrepriseConfig config = configRepository.findFirstBy().orElse(null);
+        LocalTime heureFinTravail = (config != null && config.getHeureFinTravail() != null)
+                ? config.getHeureFinTravail()
+                : LocalTime.of(17, 30);
+        
         // Récupérer les congés approuvés pour cet utilisateur
         List<Conge> conges = congeRepository.findByUserId(user.getId());
         
+        LocalDate today = LocalDate.now();
         LocalDate currentDate = startDate;
         while (!currentDate.isAfter(endDate)) {
             // Ignorer les weekends
@@ -229,6 +238,13 @@ public class PointageService {
             
             // Ignorer les jours fériés marocains
             if (isJourFerieMarocain(currentDate)) {
+                currentDate = currentDate.plusDays(1);
+                continue;
+            }
+            
+            // Pour AUJOURD'HUI : ne marquer absent que si la journée est terminée.
+            // Avant la fin de la journée, l'employé a encore le temps de pointer.
+            if (currentDate.equals(today) && LocalTime.now().isBefore(heureFinTravail)) {
                 currentDate = currentDate.plusDays(1);
                 continue;
             }

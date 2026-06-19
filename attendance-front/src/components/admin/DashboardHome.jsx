@@ -307,6 +307,23 @@ export default function DashboardHome() {
         console.log("No pointages for today yet", e);
       }
 
+      // Fetch company config to determine end-of-workday time.
+      // An employee with no clock-in is only marked ABSENT after heureFinTravail.
+      // Before that, the workday is still ongoing — they just haven't clocked in yet.
+      let workdayEnded = true; // default: treat as ended (safe fallback)
+      try {
+        const config = await api.config.get();
+        if (config && config.heureFinTravail) {
+          const [finH, finM] = config.heureFinTravail.split(":").map(Number);
+          const now = new Date();
+          const endOfWorkday = new Date();
+          endOfWorkday.setHours(finH, finM, 0, 0);
+          workdayEnded = now >= endOfWorkday;
+        }
+      } catch (e) {
+        console.log("Could not fetch company config, defaulting workdayEnded=true");
+      }
+
       // Filter out admins from the list
       const normalEmployees = allUsers.filter(u => !u.roles.includes("ROLE_ADMIN"));
 
@@ -327,7 +344,7 @@ export default function DashboardHome() {
           const isAbsenceOnly = empPointages.every(p => p.type === "ABSENCE");
           
           if (isAbsenceOnly) {
-            // Employee was auto-marked absent
+            // Employee was auto-marked absent (by backend synthesizeAbsences)
             const record = {
               id: emp.id,
               fullName: `${emp.firstName} ${emp.lastName}`,
@@ -387,17 +404,23 @@ export default function DashboardHome() {
             allList.push(record);
           }
         } else {
+          // No clock-in yet for today.
+          // Only classify as ABSENT if the workday is over.
+          // Otherwise, classify as EN_ATTENTE (waiting to clock in).
+          const recordStatus = workdayEnded ? "ABSENT" : "EN_ATTENTE";
           const record = {
             id: emp.id,
             fullName: `${emp.firstName} ${emp.lastName}`,
             department: emp.department || "-",
             poste: emp.poste || "-",
             email: emp.email,
-            status,
+            status: recordStatus,
             checkIn: null,
             checkOut: null
           };
-          absentList.push(record);
+          if (workdayEnded) {
+            absentList.push(record);
+          }
           allList.push(record);
         }
       });
@@ -725,6 +748,8 @@ export default function DashboardHome() {
                         <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
                           {emp.status === "ABSENT" ? (
                             <span className="badge badge-danger">Absent</span>
+                          ) : emp.status === "EN_ATTENTE" ? (
+                            <span className="badge" style={{ fontSize: "0.75rem", background: "rgba(100,116,139,0.15)", color: "#94a3b8", border: "1px solid rgba(100,116,139,0.25)" }}>En attente</span>
                           ) : (
                             <>
                               {emp.enRetard ? (
