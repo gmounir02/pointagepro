@@ -24,6 +24,7 @@ import {
 export default function ClockInOut() {
   const { showNotification } = useNotification();
   const [type, setType] = useState("ENTREE"); // ENTREE or SORTIE
+  const [activeSession, setActiveSession] = useState(null); // today's open ENTREE with no SORTIE
   const [qrCode, setQrCode] = useState("");
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
@@ -161,11 +162,28 @@ export default function ClockInOut() {
       }
     };
 
-    // 2. Fetch Employee metrics
+    // 2. Fetch Employee metrics + detect today's active session
     const fetchEmployeeStats = async () => {
       try {
         const pointages = await api.pointages.getMesPointages();
         const conges = await api.conges.getMesConges();
+        
+        // Detect if the employee already has an open clock-in today (no clock-out yet).
+        // If yes -> force SORTIE mode. If no -> force ENTREE mode.
+        const todayStr = new Date().toLocaleDateString("en-CA");
+        const todayPointages = pointages.filter(
+          p => p.date === todayStr && p.type !== "ABSENCE"
+        );
+        const openSession = todayPointages.find(
+          p => p.heureEntree != null && p.heureSortie == null
+        );
+        if (openSession) {
+          setActiveSession(openSession);
+          setType("SORTIE");
+        } else {
+          setActiveSession(null);
+          setType("ENTREE");
+        }
         
         // Calculate Ponctualite rate
         const checkins = pointages.filter(p => p.type === "ENTREE" || p.heureEntree != null);
@@ -468,6 +486,17 @@ export default function ClockInOut() {
       setCapturedPhoto("");
       setFaceVerificationStatus("idle");
       stopCamera();
+
+      // Flip session state based on what was just submitted
+      if (type === "ENTREE") {
+        // Just clocked in → there's now an active session → switch to SORTIE
+        setActiveSession({ heureEntree: new Date().toISOString() });
+        setType("SORTIE");
+      } else {
+        // Just clocked out → session is closed → switch back to ENTREE
+        setActiveSession(null);
+        setType("ENTREE");
+      }
     } catch (err) {
       showNotification(err.message || "Erreur de pointage", "danger");
     } finally {
@@ -607,23 +636,60 @@ export default function ClockInOut() {
       <div style={styles.grid}>
         {/* LEFT COLUMN - THE FORM */}
         <div className="glass-card" style={styles.formCard}>
+        {/* Session status banner */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "10px 16px",
+            borderRadius: "10px",
+            marginBottom: "16px",
+            background: activeSession
+              ? "rgba(139, 92, 246, 0.08)"
+              : "rgba(16, 185, 129, 0.06)",
+            border: activeSession
+              ? "1px solid rgba(139, 92, 246, 0.2)"
+              : "1px solid rgba(16, 185, 129, 0.15)",
+          }}>
+            <div style={{
+              width: "8px", height: "8px", borderRadius: "50%",
+              background: activeSession ? "var(--primary)" : "var(--success)",
+              boxShadow: activeSession
+                ? "0 0 6px var(--primary)"
+                : "0 0 6px var(--success)",
+              flexShrink: 0
+            }} />
+            <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)", flex: 1 }}>
+              {activeSession
+                ? <>Vous avez pointé votre <strong style={{ color: "#fff" }}>entrée</strong> — vous ne pouvez que pointer la <strong style={{ color: "var(--primary-hover)" }}>sortie</strong>.</>
+                : <>Aucune session active — vous pouvez pointer votre <strong style={{ color: "var(--success)" }}>entrée</strong>.</>
+              }
+            </span>
+          </div>
+
           {/* Switcher ENTREE / SORTIE */}
           <div style={styles.typeSwitcher}>
             <button
+              type="button"
+              disabled={!!activeSession}
               style={{
                 ...styles.switchBtn,
                 ...(type === "ENTREE" ? styles.switchBtnActiveIn : {}),
+                ...(activeSession ? { opacity: 0.35, cursor: "not-allowed" } : {}),
               }}
-              onClick={() => setType("ENTREE")}
+              onClick={() => !activeSession && setType("ENTREE")}
             >
               ARRIVÉE (Entrée)
             </button>
             <button
+              type="button"
+              disabled={!activeSession}
               style={{
                 ...styles.switchBtn,
                 ...(type === "SORTIE" ? styles.switchBtnActiveOut : {}),
+                ...(!activeSession ? { opacity: 0.35, cursor: "not-allowed" } : {}),
               }}
-              onClick={() => setType("SORTIE")}
+              onClick={() => activeSession && setType("SORTIE")}
             >
               DÉPART (Sortie)
             </button>
