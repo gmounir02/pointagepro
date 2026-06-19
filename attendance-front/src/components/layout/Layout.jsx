@@ -83,8 +83,13 @@ export default function Layout({ activeTab, setActiveTab, children }) {
         setShowNotificationsDropdown(false);
       }
     };
+    // Use both mousedown (desktop) and touchstart (mobile)
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, []);
 
   const handleMarkAsRead = async (id) => {
@@ -287,20 +292,77 @@ export default function Layout({ activeTab, setActiveTab, children }) {
             <span style={styles.mobileHeaderTitle}>{activeItem?.label}</span>
           </div>
           
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", position: "relative" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", position: "relative", zIndex: 200 }}>
 
             {/* Mobile Notification bell */}
             <button 
+              ref={bellRef}
               onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
-              style={styles.mobileBellButton}
+              style={{ ...styles.mobileBellButton, padding: "8px", minWidth: "40px", minHeight: "40px", justifyContent: "center" }}
             >
-              <Bell size={18} color="var(--text-primary)" />
+              <Bell size={20} color="var(--text-primary)" />
               {unreadCount > 0 && (
                 <span style={{ ...styles.bellBadge, width: "14px", height: "14px", fontSize: "0.6rem" }}>
                   {unreadCount}
                 </span>
               )}
             </button>
+
+            {/* Mobile Notifications Dropdown */}
+            {showNotificationsDropdown && (
+              <div ref={dropdownRef} className="glass-card" style={styles.mobileNotificationsDropdown}>
+                <div style={styles.dropdownHeader}>
+                  <h4 style={{ margin: 0, color: "#fff", fontSize: "0.95rem", fontWeight: "700" }}>Notifications</h4>
+                  {unreadCount > 0 && (
+                    <button onClick={handleMarkAllAsRead} style={styles.markAllReadBtn}>
+                      Tout marquer comme lu
+                    </button>
+                  )}
+                </div>
+
+                <div style={styles.dropdownList}>
+                  {notifications.length === 0 ? (
+                    <div style={styles.emptyState}>
+                      <span style={{ fontSize: "1.5rem" }}>🔔</span>
+                      <p style={{ margin: "8px 0 0 0", fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                        Aucune notification pour le moment
+                      </p>
+                    </div>
+                  ) : (
+                    notifications.map((notif) => (
+                      <div 
+                        key={notif.id} 
+                        style={{
+                          ...styles.notificationItem,
+                          background: notif.read ? "transparent" : "rgba(139, 92, 246, 0.04)"
+                        }}
+                        onClick={() => !notif.read && handleMarkAsRead(notif.id)}
+                      >
+                        <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                          <div style={styles.notifIconBox}>
+                            {getNotificationIcon(notif.type)}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div style={{ fontWeight: notif.read ? "500" : "700", color: "#fff", fontSize: "0.82rem" }}>
+                                {notif.title}
+                              </div>
+                              {!notif.read && <div style={styles.unreadDot}></div>}
+                            </div>
+                            <p style={{ margin: "3px 0 0 0", fontSize: "0.75rem", color: "var(--text-secondary)", lineHeight: "1.4" }}>
+                              {notif.message}
+                            </p>
+                            <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginTop: "4px", display: "inline-block" }}>
+                              {new Date(notif.createdAt).toLocaleDateString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </header>
 
@@ -524,9 +586,25 @@ const styles = {
     border: "1px solid var(--border-color-glow)",
     borderRadius: "14px",
     boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
-    zIndex: 101,
+    zIndex: 200,
     overflow: "hidden",
     animation: "fadeInUp 0.25s ease-out",
+  },
+  mobileNotificationsDropdown: {
+    position: "fixed",
+    top: "64px",
+    left: "12px",
+    right: "12px",
+    width: "auto",
+    background: "#12141d",
+    border: "1px solid var(--border-color-glow)",
+    borderRadius: "14px",
+    boxShadow: "0 20px 40px rgba(0, 0, 0, 0.5)",
+    zIndex: 9999,
+    overflow: "hidden",
+    animation: "fadeInUp 0.25s ease-out",
+    maxHeight: "70vh",
+    overflowY: "auto",
   },
   dropdownHeader: {
     display: "flex",
