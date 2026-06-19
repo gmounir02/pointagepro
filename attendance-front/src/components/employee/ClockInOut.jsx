@@ -17,7 +17,8 @@ import {
   Fingerprint,
   Hourglass,
   Award,
-  ShieldCheck
+  ShieldCheck,
+  Loader2
 } from "lucide-react";
 
 export default function ClockInOut() {
@@ -559,7 +560,7 @@ export default function ClockInOut() {
               }}
               onClick={() => setType("ENTREE")}
             >
-              🚀 ARRIVÉE (Entrée)
+              ARRIVÉE (Entrée)
             </button>
             <button
               style={{
@@ -568,7 +569,7 @@ export default function ClockInOut() {
               }}
               onClick={() => setType("SORTIE")}
             >
-              🚪 DEPART (Sortie)
+              DÉPART (Sortie)
             </button>
           </div>
 
@@ -717,22 +718,22 @@ export default function ClockInOut() {
                   }}>
                     {faceVerificationStatus === "idle" && (
                       <span style={{ color: "var(--text-secondary)", fontSize: "0.8rem", fontWeight: "500" }}>
-                        📷 Regardez la caméra et cliquez sur valider pour soumettre votre présence
+                        Regardez la caméra et cliquez sur valider pour soumettre votre présence
                       </span>
                     )}
                     {faceVerificationStatus === "scanning" && (
                       <span style={{ color: "var(--primary-hover)", fontSize: "0.8rem", fontWeight: "600" }}>
-                        ⌛ Analyse faciale en cours... comparaison biométrique...
+                        Analyse faciale en cours... comparaison biométrique...
                       </span>
                     )}
                     {faceVerificationStatus === "success" && (
                       <span style={{ color: "var(--success)", fontSize: "0.8rem", fontWeight: "600" }}>
-                        ✅ Identité vérifiée avec succès ! Similarité : {faceMatchConfidence}%
+                        Identité vérifiée avec succès ! Similarité : {faceMatchConfidence}%
                       </span>
                     )}
                     {faceVerificationStatus === "failed" && (
                       <span style={{ color: "var(--danger)", fontSize: "0.8rem", fontWeight: "600" }}>
-                        ❌ Erreur de correspondance ({faceMatchConfidence}%). Veuillez vous recentrer.
+                        Erreur de correspondance ({faceMatchConfidence}%). Veuillez vous recentrer.
                       </span>
                     )}
                   </div>
@@ -773,7 +774,7 @@ export default function ClockInOut() {
               disabled={submitting}
             >
               {submitting ? (
-                <span className="animate-spin-slow">⌛</span>
+                <Loader2 size={20} className="animate-spin" />
               ) : (
                 <>
                   <CheckCircle2 size={20} />

@@ -452,4 +452,46 @@ public class AttendanceSystemApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.nomEntreprise").value("Ma Super Company V2"));
     }
+
+    @Test
+    public void testAdminModifierPointage() throws Exception {
+        // 1. Créer un pointage incomplet (entrée uniquement) en base de données
+        Pointage pointage = Pointage.builder()
+                .userId(employeeUser.getId())
+                .userFullName(employeeUser.getFirstName() + " " + employeeUser.getLastName())
+                .date(LocalDate.now())
+                .heureEntree(LocalDateTime.now().minusHours(8))
+                .type(Pointage.TypePointage.ENTREE)
+                .build();
+        pointage = pointageRepository.save(pointage);
+
+        // 2. Tenter de modifier le pointage avec un compte employé (Interdit / 403)
+        com.attendance.system.dto.request.PointageUpdateRequest updateReq = new com.attendance.system.dto.request.PointageUpdateRequest();
+        updateReq.setHeureEntree(LocalDateTime.now().minusHours(8).withNano(0).toString());
+        updateReq.setHeureSortie(LocalDateTime.now().withNano(0).toString());
+        updateReq.setType(Pointage.TypePointage.ENTREE);
+        updateReq.setNote("Régularisé");
+
+        mockMvc.perform(patch("/api/pointages/" + pointage.getId() + "/admin-modifier")
+                .header("Authorization", employeeToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isForbidden());
+
+        // 3. Modifier le pointage avec le compte administrateur (Ok / 200)
+        mockMvc.perform(patch("/api/pointages/" + pointage.getId() + "/admin-modifier")
+                .header("Authorization", adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.heureSortie").exists())
+                .andExpect(jsonPath("$.data.modifiedByAdminName").exists());
+
+        // 4. Tenter de modifier à nouveau la session complète (Erreur métier / 400 Bad Request)
+        mockMvc.perform(patch("/api/pointages/" + pointage.getId() + "/admin-modifier")
+                .header("Authorization", adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateReq)))
+                .andExpect(status().isBadRequest());
+    }
 }

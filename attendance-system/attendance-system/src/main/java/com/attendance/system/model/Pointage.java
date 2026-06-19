@@ -61,6 +61,12 @@ public class Pointage {
 
     private String statutJustification; // "NON_JUSTIFIE", "EN_ATTENTE", "APPROUVEE", "REJETEE"
 
+    private String modifiedByAdminId;
+
+    private String modifiedByAdminName;
+
+    private LocalDateTime modifiedAt;
+
     public enum TypePointage {
         ENTREE,
         SORTIE,

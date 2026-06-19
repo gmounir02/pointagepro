@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { api } from "../services/api";
+import { CheckCircle2, AlertOctagon, AlertTriangle, Info } from "lucide-react";
 
 const AuthContext = createContext(null);
 const NotificationContext = createContext(null);
@@ -75,10 +76,10 @@ export function GlobalProvider({ children }) {
               onClick={() => dismissNotification(notif.id)}
             >
               <div style={styles.iconContainer}>
-                {notif.type === "success" && "🟢"}
-                {notif.type === "danger" && "🔴"}
-                {notif.type === "warning" && "🟡"}
-                {notif.type === "info" && "🔵"}
+                {notif.type === "success" && <CheckCircle2 size={18} color="var(--success)" />}
+                {notif.type === "danger" && <AlertOctagon size={18} color="var(--danger)" />}
+                {notif.type === "warning" && <AlertTriangle size={18} color="var(--warning)" />}
+                {notif.type === "info" && <Info size={18} color="var(--info)" />}
               </div>
               <div style={styles.message}>{notif.message}</div>
               <button style={styles.closeBtn}>×</button>

@@ -189,7 +189,7 @@ export default function MyHistory() {
                           <>
                             {p.statutJustification === "EN_ATTENTE" ? (
                               <span className="badge" style={{ ...styles.badge, background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)", borderColor: "rgba(245, 158, 11, 0.3)" }}>
-                                ⏳ Absence - Justification en attente
+                                Absence - Justification en attente
                               </span>
                             ) : p.statutJustification === "APPROUVEE" ? (
                               <span className="badge badge-success" style={styles.badge}>
@@ -199,7 +199,7 @@ export default function MyHistory() {
                             ) : p.statutJustification === "REJETEE" ? (
                               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                 <span className="badge badge-danger" style={styles.badge}>
-                                  ❌ Absence (Justification rejetée)
+                                  Absence (Justification rejetée)
                                 </span>
                                 <button
                                   className="btn btn-secondary"
@@ -215,7 +215,7 @@ export default function MyHistory() {
                             ) : (
                               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                 <span className="badge badge-danger" style={styles.badge}>
-                                  🚫 Absent
+                                  Absent
                                 </span>
                                 <button
                                   className="btn btn-primary"
@@ -225,7 +225,7 @@ export default function MyHistory() {
                                     setShowJustifyModal(true);
                                   }}
                                 >
-                                  ✍️ Justifier
+                                  Justifier
                                 </button>
                               </div>
                             )}
@@ -234,12 +234,12 @@ export default function MyHistory() {
                           <>
                             {p.statutJustification === "EN_ATTENTE" ? (
                               <span className="badge" style={{ ...styles.badge, background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)", borderColor: "rgba(245, 158, 11, 0.3)" }}>
-                                ⏳ En attente
+                                En attente
                               </span>
                             ) : p.statutJustification === "REJETEE" ? (
                               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                 <span className="badge badge-danger" style={styles.badge}>
-                                  ❌ Retard (Rejeté)
+                                  Retard (Rejeté)
                                 </span>
                                 <button
                                   className="btn btn-secondary"
@@ -266,7 +266,7 @@ export default function MyHistory() {
                                     setShowJustifyModal(true);
                                   }}
                                 >
-                                  ✍️ Justifier
+                                  Justifier
                                 </button>
                               </div>
                             )}
@@ -280,13 +280,13 @@ export default function MyHistory() {
 
                         {p.sortieAnticipee && (
                           <span className="badge" style={{ ...styles.badge, background: "rgba(244, 63, 94, 0.15)", color: "var(--danger)", borderColor: "rgba(244, 63, 94, 0.3)" }}>
-                            🚪 Sortie Anticipée
+                            Sortie Anticipée
                           </span>
                         )}
                         
                         {p.heuresInsuffisantes && p.type !== "ABSENCE" && (
                           <span className="badge" style={{ ...styles.badge, background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)", borderColor: "rgba(245, 158, 11, 0.3)" }}>
-                            ⏱️ Heures &lt; 8h
+                            Heures &lt; 8h
                           </span>
                         )}
                       </div>
@@ -315,10 +315,10 @@ export default function MyHistory() {
                         {p.statutJustification === "APPROUVEE" ? (
                           <span className="badge badge-success">Absence Justifiée</span>
                         ) : p.statutJustification === "EN_ATTENTE" ? (
-                          <span className="badge" style={{ background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>⏳ Justification en attente</span>
+                          <span className="badge" style={{ background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>Justification en attente</span>
                         ) : (
                           <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                            <span className="badge badge-danger">🚫 Absent</span>
+                            <span className="badge badge-danger">Absent</span>
                             {p.statutJustification !== "REJETEE" ? (
                               <button
                                 style={{ padding: "3px 6px", fontSize: "0.65rem", background: "var(--primary)", border: "none", color: "#fff", borderRadius: "4px", cursor: "pointer" }}
@@ -336,10 +336,10 @@ export default function MyHistory() {
                     ) : p.enRetard ? (
                       <>
                         {p.statutJustification === "EN_ATTENTE" ? (
-                          <span className="badge" style={{ background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>⏳ En attente</span>
+                          <span className="badge" style={{ background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>En attente</span>
                         ) : p.statutJustification === "REJETEE" ? (
                           <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                            <span className="badge badge-danger">❌ Rejeté</span>
+                            <span className="badge badge-danger">Rejeté</span>
                             <button
                               style={{ padding: "3px 6px", fontSize: "0.65rem", background: "var(--primary)", border: "none", color: "#fff", borderRadius: "4px", cursor: "pointer" }}
                               onClick={() => { setSelectedPointage(p); setShowJustifyModal(true); }}
@@ -363,13 +363,13 @@ export default function MyHistory() {
 
                     {p.sortieAnticipee && (
                       <span className="badge" style={{ background: "rgba(244, 63, 94, 0.15)", color: "var(--danger)", border: "1px solid rgba(244, 63, 94, 0.2)" }}>
-                        🚪 Sortie Anticipée
+                        Sortie Anticipée
                       </span>
                     )}
                     
                     {p.heuresInsuffisantes && p.type !== "ABSENCE" && (
                       <span className="badge" style={{ background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
-                        ⏱️ Heures &lt; 8h
+                        Heures &lt; 8h
                       </span>
                     )}
                   </div>
@@ -379,21 +379,21 @@ export default function MyHistory() {
                   <div style={styles.cardCol}>
                     <div style={styles.cardLabel}>Arrivée</div>
                     <div style={styles.cardVal} className="success-text">
-                      {p.type === "ABSENCE" ? "🚫 --:--" : `🟢 ${formatTime(p.heureEntree)}`}
+                      {p.type === "ABSENCE" ? "--:--" : formatTime(p.heureEntree)}
                     </div>
                   </div>
 
                   <div style={styles.cardCol}>
                     <div style={styles.cardLabel}>Départ</div>
                     <div style={styles.cardVal}>
-                      {p.type === "ABSENCE" ? "🚫 --:--" : (p.heureSortie ? `🔴 ${formatTime(p.heureSortie)}` : "🚪 Non pointé")}
+                      {p.type === "ABSENCE" ? "--:--" : (p.heureSortie ? formatTime(p.heureSortie) : "Non pointé")}
                     </div>
                   </div>
 
                   <div style={styles.cardCol}>
                     <div style={styles.cardLabel}>Durée de présence</div>
                     <div style={{ ...styles.cardVal, color: "#fff", fontWeight: "600" }}>
-                      {p.type === "ABSENCE" ? "⏱️ -" : `⏱️ ${formatDuration(p.dureeMinutes)}`}
+                      {p.type === "ABSENCE" ? "-" : formatDuration(p.dureeMinutes)}
                     </div>
                   </div>
                 </div>
@@ -436,7 +436,7 @@ export default function MyHistory() {
             animation: "fadeIn 0.2s ease"
           }}>
             <h3 style={{ fontSize: "1.2rem", fontWeight: "700", color: "#fff", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
-              {selectedPointage.type === "ABSENCE" ? "🚫 Justifier mon Absence" : "⚠️ Justifier mon Retard"}
+              {selectedPointage.type === "ABSENCE" ? "Justifier mon Absence" : "Justifier mon Retard"}
             </h3>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", margin: "10px 0 20px 0" }}>
               {selectedPointage.type === "ABSENCE"

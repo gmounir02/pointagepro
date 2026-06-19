@@ -1,6 +1,7 @@
 package com.attendance.system.service;
 
 import com.attendance.system.dto.request.PointageRequest;
+import com.attendance.system.dto.request.PointageUpdateRequest;
 import com.attendance.system.dto.request.JustificationRequest;
 import com.attendance.system.dto.request.JustificationEvaluationRequest;
 import com.attendance.system.exception.AttendanceException;
@@ -463,6 +464,126 @@ public class PointageService {
             log.info("Absence enregistrée pour {} ({}) le {}", emp.getEmail(), emp.getId(), date);
         }
         log.info("Fin du traitement des absences automatiques.");
+    }
+
+    public Pointage modifierPointageParAdmin(String id, PointageUpdateRequest request, String adminEmail) {
+        Pointage pointage;
+        if (id.startsWith("temp-ABSENCE-")) {
+            if (request.getUserId() == null || request.getUserId().trim().isEmpty()) {
+                throw new AttendanceException("Identifiant de l'employé requis pour régulariser une absence.");
+            }
+            User employee = userRepository.findById(request.getUserId())
+                    .orElseThrow(() -> new AttendanceException("Employé introuvable"));
+            
+            String dateStr = id.substring("temp-ABSENCE-".length());
+            LocalDate date = LocalDate.parse(dateStr);
+            
+            Pointage newAbsence = Pointage.builder()
+                    .userId(employee.getId())
+                    .userFullName(employee.getFirstName() + " " + employee.getLastName())
+                    .date(date)
+                    .type(Pointage.TypePointage.ABSENCE)
+                    .statutJustification("NON_JUSTIFIE")
+                    .note("Absence automatique - Non pointé")
+                    .heuresInsuffisantes(true)
+                    .build();
+            pointage = pointageRepository.save(newAbsence);
+            log.info("Création d'un enregistrement d'absence réel pour la date {} par l'admin lors de la régularisation", date);
+        } else {
+            pointage = pointageRepository.findById(id)
+                    .orElseThrow(() -> new AttendanceException("Pointage introuvable"));
+        }
+
+        // Règle métier : Une session complète (où entrée ET sortie sont déjà renseignées) ne peut pas être modifiée
+        // sauf si le type est ABSENCE (ce qui permet de régulariser une absence automatique)
+        if (pointage.getHeureEntree() != null && pointage.getHeureSortie() != null && pointage.getType() != Pointage.TypePointage.ABSENCE) {
+            throw new AttendanceException("Une session de pointage complète ne peut pas être modifiée.");
+        }
+
+        User admin = userRepository.findByEmail(adminEmail)
+                .orElseThrow(() -> new AttendanceException("Administrateur introuvable"));
+
+        // Parser les heures si elles sont fournies
+        LocalDateTime newHeureEntree = null;
+        if (request.getHeureEntree() != null && !request.getHeureEntree().trim().isEmpty()) {
+            newHeureEntree = LocalDateTime.parse(request.getHeureEntree().trim());
+        }
+
+        LocalDateTime newHeureSortie = null;
+        if (request.getHeureSortie() != null && !request.getHeureSortie().trim().isEmpty()) {
+            newHeureSortie = LocalDateTime.parse(request.getHeureSortie().trim());
+        }
+
+        // Mettre à jour les champs
+        if (newHeureEntree != null) {
+            pointage.setHeureEntree(newHeureEntree);
+        }
+        if (newHeureSortie != null) {
+            pointage.setHeureSortie(newHeureSortie);
+        }
+        if (request.getType() != null) {
+            pointage.setType(request.getType());
+        }
+        if (request.getNote() != null) {
+            pointage.setNote(request.getNote());
+        }
+
+        // Traçabilité
+        pointage.setModifiedByAdminId(admin.getId());
+        pointage.setModifiedByAdminName(admin.getFirstName() + " " + admin.getLastName());
+        pointage.setModifiedAt(LocalDateTime.now());
+
+        // Recalculer les statuts et durées
+        EntrepriseConfig config = configRepository.findFirstBy().orElse(null);
+
+        // 1. Durée
+        if (pointage.getHeureEntree() != null && pointage.getHeureSortie() != null) {
+            long duration = ChronoUnit.MINUTES.between(pointage.getHeureEntree(), pointage.getHeureSortie());
+            pointage.setDureeMinutes(duration);
+        } else {
+            pointage.setDureeMinutes(null);
+        }
+
+        // 2. Retard
+        if (pointage.getHeureEntree() != null) {
+            LocalTime heureDebut = (config != null && config.getHeureDebutTravail() != null)
+                    ? config.getHeureDebutTravail()
+                    : LocalTime.of(workStartHour, workStartMinute);
+
+            int tolerance = (config != null && config.getToleranceRetardMinutes() != null)
+                    ? config.getToleranceRetardMinutes() : 0;
+
+            LocalTime heureLimit = heureDebut.plusMinutes(tolerance);
+            pointage.setEnRetard(pointage.getHeureEntree().toLocalTime().isAfter(heureLimit));
+        } else {
+            pointage.setEnRetard(false);
+        }
+
+        // 3. Sortie anticipée
+        if (pointage.getHeureSortie() != null) {
+            if (config != null && config.getHeureFinTravail() != null) {
+                pointage.setSortieAnticipee(pointage.getHeureSortie().toLocalTime().isBefore(config.getHeureFinTravail()));
+            } else {
+                pointage.setSortieAnticipee(false);
+            }
+        } else {
+            pointage.setSortieAnticipee(false);
+        }
+
+        // 4. Heures insuffisantes sur la journée
+        final String currentPointageId = pointage.getId();
+        if (pointage.getHeureEntree() != null && pointage.getHeureSortie() != null) {
+            List<Pointage> dayPointages = pointageRepository.findByUserIdAndDate(pointage.getUserId(), pointage.getDate());
+            long totalDureeMinutesAujourdHui = dayPointages.stream()
+                    .filter(p -> p.getDureeMinutes() != null && !p.getId().equals(currentPointageId))
+                    .mapToLong(Pointage::getDureeMinutes)
+                    .sum() + pointage.getDureeMinutes();
+            pointage.setHeuresInsuffisantes(totalDureeMinutesAujourdHui < 480);
+        } else {
+            pointage.setHeuresInsuffisantes(false);
+        }
+
+        return pointageRepository.save(pointage);
     }
 
     @org.springframework.scheduling.annotation.Scheduled(cron = "0 59 23 * * *")

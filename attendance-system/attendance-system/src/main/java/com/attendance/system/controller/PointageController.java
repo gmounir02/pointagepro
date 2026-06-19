@@ -1,6 +1,7 @@
 package com.attendance.system.controller;
 
 import com.attendance.system.dto.request.PointageRequest;
+import com.attendance.system.dto.request.PointageUpdateRequest;
 import com.attendance.system.dto.request.JustificationRequest;
 import com.attendance.system.dto.request.JustificationEvaluationRequest;
 import com.attendance.system.dto.response.ApiResponse;
@@ -98,5 +99,15 @@ public class PointageController {
         LocalDate targetDate = date != null ? date : LocalDate.now();
         pointageService.marquerAbsences(targetDate);
         return ResponseEntity.ok(ApiResponse.success("Absences automatiques traitées pour le " + targetDate, null));
+    }
+
+    @PatchMapping("/{id}/admin-modifier")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Pointage>> modifierPointageParAdmin(
+            @PathVariable String id,
+            @Valid @RequestBody PointageUpdateRequest request,
+            Authentication auth) {
+        Pointage pointage = pointageService.modifierPointageParAdmin(id, request, auth.getName());
+        return ResponseEntity.ok(ApiResponse.success("Pointage régularisé avec succès", pointage));
     }
 }

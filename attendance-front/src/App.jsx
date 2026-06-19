@@ -15,6 +15,7 @@ import QrCodeManager from "./components/admin/QrCodeManager";
 import EmployeeManager from "./components/admin/EmployeeManager";
 import LeaveRequests from "./components/admin/LeaveRequests";
 import EnterpriseConfig from "./components/admin/EnterpriseConfig";
+import JustificationsManager from "./components/admin/JustificationsManager";
 
 function AppContent() {
   const { user } = useAuth();
@@ -47,6 +48,8 @@ function AppContent() {
         return <EmployeeManager />;
       case "conges":
         return <LeaveRequests />;
+      case "justifications":
+        return <JustificationsManager />;
       case "settings":
         return <EnterpriseConfig />;
 

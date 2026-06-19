@@ -16,7 +16,8 @@ import {
   XCircle,
   AlertTriangle,
   Info,
-  Calendar
+  Calendar,
+  ShieldAlert
 } from "lucide-react";
 
 export default function Layout({ activeTab, setActiveTab, children }) {
@@ -109,7 +110,8 @@ export default function Layout({ activeTab, setActiveTab, children }) {
     { id: "dashboard", label: "Tableau de Bord", icon: LayoutDashboard },
     { id: "qrcodes", label: "Codes QR", icon: QrCode },
     { id: "employees", label: "Employés", icon: Users },
-    { id: "conges", label: "Congés & Absences", icon: CalendarDays },
+    { id: "conges", label: "Congés", icon: CalendarDays },
+    { id: "justifications", label: "Justifications", icon: ShieldAlert },
     { id: "settings", label: "Configuration", icon: Settings },
   ];
 

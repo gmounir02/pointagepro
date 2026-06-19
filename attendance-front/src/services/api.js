@@ -120,6 +120,8 @@ export const api = {
       request("/pointages/justifications/en-attente"),
     genererAbsences: (date) => 
       request(`/pointages/generer-absences${date ? `?date=${date}` : ""}`, { method: "POST" }),
+    adminModifier: (id, data) =>
+      request(`/pointages/${id}/admin-modifier`, { method: "PATCH", body: data }),
   },
 
   // Congés (Leave requests)

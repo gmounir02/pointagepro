@@ -13,7 +13,11 @@ import {
   RefreshCw,
   Calendar,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Camera,
+  CheckCircle2,
+  Pencil,
+  Loader2
 } from "lucide-react";
 
 export default function DashboardHome() {
@@ -35,6 +39,12 @@ export default function DashboardHome() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedMonthFilter, setSelectedMonthFilter] = useState("all");
   const [previewSelfieModal, setPreviewSelfieModal] = useState(null); // { photo, title, time, date }
+  
+  // Edit Pointage States
+  const [showEditPointageModal, setShowEditPointageModal] = useState(false);
+  const [editingPointage, setEditingPointage] = useState(null);
+  const [editForm, setEditForm] = useState({ heureEntree: "", heureSortie: "", type: "", note: "" });
+  const [submittingEdit, setSubmittingEdit] = useState(false);
 
   const handleExportCSV = (data, title = "export") => {
     if (!data || data.length === 0) {
@@ -127,8 +137,8 @@ export default function DashboardHome() {
                 return `
                   <tr>
                     <td style="font-weight: 600; text-transform: capitalize;">${formattedDate}</td>
-                    <td>🟢 ${p.heureEntree ? new Date(p.heureEntree).toLocaleTimeString("fr-FR", {hour: '2-digit', minute: '2-digit'}) : "-"}</td>
-                    <td>🔴 ${p.heureSortie ? new Date(p.heureSortie).toLocaleTimeString("fr-FR", {hour: '2-digit', minute: '2-digit'}) : "Non pointé"}</td>
+                    <td>${p.heureEntree ? new Date(p.heureEntree).toLocaleTimeString("fr-FR", {hour: '2-digit', minute: '2-digit'}) : "-"}</td>
+                    <td>${p.heureSortie ? new Date(p.heureSortie).toLocaleTimeString("fr-FR", {hour: '2-digit', minute: '2-digit'}) : "Non pointé"}</td>
                     <td>
                       ${p.enRetard ? '<span class="badge badge-warning">En Retard</span>' : '<span class="badge badge-success">À l\'heure</span>'}
                       ${p.sortieAnticipee ? '<span class="badge" style="background-color: #fee2e2; color: #991b1b; display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 5px;">Sortie Anticipée</span>' : ''}
@@ -211,6 +221,72 @@ export default function DashboardHome() {
       showNotification("Impossible de charger l'historique de cet employé", "danger");
     } finally {
       setLoadingHistory(false);
+    }
+  };
+
+  const handleOpenEditPointage = (p) => {
+    // Règle métier : Une session complète ne peut pas être modifiée
+    if (p.heureEntree && p.heureSortie && p.type !== "ABSENCE") {
+      showNotification("Une session complète ne peut pas être modifiée.", "warning");
+      return;
+    }
+
+    setEditingPointage(p);
+
+    const formatForInput = (dtStr) => {
+      if (!dtStr) return "";
+      const d = new Date(dtStr);
+      if (isNaN(d.getTime())) return "";
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    setEditForm({
+      heureEntree: formatForInput(p.heureEntree),
+      heureSortie: formatForInput(p.heureSortie),
+      type: p.type || "ENTREE",
+      note: p.note || ""
+    });
+    setShowEditPointageModal(true);
+  };
+
+  const handleEditPointageSubmit = async (e) => {
+    e.preventDefault();
+    setSubmittingEdit(true);
+    try {
+      if (editForm.heureEntree && editForm.heureSortie) {
+        if (new Date(editForm.heureEntree) > new Date(editForm.heureSortie)) {
+          showNotification("L'heure de sortie doit être après l'heure d'entrée", "danger");
+          setSubmittingEdit(false);
+          return;
+        }
+      }
+
+      await api.pointages.adminModifier(editingPointage.id, {
+        userId: editingPointage.userId || historyEmployee?.id,
+        heureEntree: editForm.heureEntree ? editForm.heureEntree : null,
+        heureSortie: editForm.heureSortie ? editForm.heureSortie : null,
+        type: editForm.type,
+        note: editForm.note
+      });
+
+      showNotification("Pointage régularisé avec succès !", "success");
+      setShowEditPointageModal(false);
+
+      // Refresh employee history
+      if (historyEmployee) {
+        const data = await api.pointages.getByUser(historyEmployee.id);
+        if (data) {
+          const sorted = data.sort((a, b) => new Date(b.date) - new Date(a.date));
+          setHistoryPointages(sorted);
+        }
+      }
+      
+      fetchStats();
+    } catch (err) {
+      showNotification(err.message || "Erreur lors de la modification du pointage", "danger");
+    } finally {
+      setSubmittingEdit(false);
     }
   };
 
@@ -543,7 +619,7 @@ export default function DashboardHome() {
                 )}
                 title="Exporter cette liste en CSV"
               >
-                📊 CSV
+                CSV
               </button>
               <button
                 className="btn btn-secondary"
@@ -569,7 +645,7 @@ export default function DashboardHome() {
                 )}
                 title="Imprimer cette liste"
               >
-                🖨️ PDF
+                PDF
               </button>
             </div>
           )}
@@ -614,7 +690,7 @@ export default function DashboardHome() {
                       <td style={{ padding: "12px", color: emp.checkIn ? "var(--success)" : "var(--text-muted)" }}>
                         {emp.checkIn ? (
                           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span>🟢 {formatTime(emp.checkIn)}</span>
+                            <span>{formatTime(emp.checkIn)}</span>
                             {emp.photoEntree && (
                               <button 
                                 type="button" 
@@ -622,7 +698,7 @@ export default function DashboardHome() {
                                 onClick={() => setPreviewSelfieModal({ photo: emp.photoEntree, title: `Selfie d'entrée - ${emp.fullName}`, time: formatTime(emp.checkIn) })}
                                 title="Voir la photo d'entrée"
                               >
-                                📷
+                                <Camera size={14} />
                               </button>
                             )}
                           </div>
@@ -631,7 +707,7 @@ export default function DashboardHome() {
                       <td style={{ padding: "12px", color: emp.checkOut ? "var(--primary)" : "var(--text-muted)" }}>
                         {emp.checkOut ? (
                           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span>🔴 {formatTime(emp.checkOut)}</span>
+                            <span>{formatTime(emp.checkOut)}</span>
                             {emp.photoSortie && (
                               <button 
                                 type="button" 
@@ -639,7 +715,7 @@ export default function DashboardHome() {
                                 onClick={() => setPreviewSelfieModal({ photo: emp.photoSortie, title: `Selfie de sortie - ${emp.fullName}`, time: formatTime(emp.checkOut) })}
                                 title="Voir la photo de sortie"
                               >
-                                📷
+                                <Camera size={14} />
                               </button>
                             )}
                           </div>
@@ -652,18 +728,18 @@ export default function DashboardHome() {
                           ) : (
                             <>
                               {emp.enRetard ? (
-                                <span className="badge badge-warning" style={{ fontSize: "0.75rem" }}>⚠️ En Retard</span>
+                                <span className="badge badge-warning" style={{ fontSize: "0.75rem" }}>En Retard</span>
                               ) : (
-                                <span className="badge badge-success" style={{ fontSize: "0.75rem" }}>🟢 À l'heure</span>
+                                <span className="badge badge-success" style={{ fontSize: "0.75rem" }}>À l'heure</span>
                               )}
                               {emp.sortieAnticipee && (
                                 <span className="badge" style={{ fontSize: "0.75rem", background: "rgba(244, 63, 94, 0.15)", color: "var(--danger)", border: "1px solid rgba(244, 63, 94, 0.2)" }}>
-                                  🚪 Sortie Anticipée
+                                  Sortie Anticipée
                                 </span>
                               )}
                               {emp.heuresInsuffisantes && (
                                 <span className="badge" style={{ fontSize: "0.75rem", background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
-                                  ⏱️ Heures &lt; 8h
+                                  Heures &lt; 8h
                                 </span>
                               )}
                             </>
@@ -700,7 +776,7 @@ export default function DashboardHome() {
         )}
       </div>
 
-      {/* ⚠️ JUSTIFICATIONS DE RETARDS EN ATTENTE */}
+      {/* JUSTIFICATIONS DE RETARDS EN ATTENTE */}
       {justifications.length > 0 && (
         <div className="glass-card" style={{ ...styles.listCard, marginTop: "24px", borderColor: "rgba(245, 158, 11, 0.25)", boxShadow: "0 4px 20px rgba(245, 158, 11, 0.05)" }}>
           <div style={styles.listHeader}>
@@ -1084,7 +1160,7 @@ export default function DashboardHome() {
                         }}
                         onClick={() => handleExportCSV(filteredHistoryPointages, `Presence_${historyEmployee.fullName}`)}
                       >
-                        📊 Excel / CSV
+                        Excel / CSV
                       </button>
                       <button
                         className="btn btn-secondary"
@@ -1098,7 +1174,7 @@ export default function DashboardHome() {
                         }}
                         onClick={() => handleExportPDF(filteredHistoryPointages, historyEmployee.fullName)}
                       >
-                        🖨️ Imprimer PDF
+                        Imprimer PDF
                       </button>
                     </>
                   )}
@@ -1147,6 +1223,7 @@ export default function DashboardHome() {
                       <th style={{ textAlign: "left", padding: "12px" }}>Statut</th>
                       <th style={{ textAlign: "left", padding: "12px" }}>Durée</th>
                       <th style={{ textAlign: "left", padding: "12px" }}>Notes</th>
+                      <th style={{ textAlign: "left", padding: "12px" }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1179,9 +1256,9 @@ export default function DashboardHome() {
                             {formattedDate}
                           </td>
                           <td style={{ padding: "12px", color: p.type === "ABSENCE" ? "var(--text-muted)" : "#fff" }}>
-                            {p.type === "ABSENCE" ? "🚫 --:--" : (
+                            {p.type === "ABSENCE" ? "--:--" : (
                               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                <span>🟢 {formatTime(p.heureEntree)}</span>
+                                <span>{formatTime(p.heureEntree)}</span>
                                 {p.photoEntree && (
                                   <button 
                                     type="button" 
@@ -1189,16 +1266,16 @@ export default function DashboardHome() {
                                     onClick={() => setPreviewSelfieModal({ photo: p.photoEntree, title: `Selfie d'entrée - ${historyEmployee.fullName}`, time: formatTime(p.heureEntree), date: formattedDate })}
                                     title="Voir la photo d'entrée"
                                   >
-                                    📷
+                                    <Camera size={14} />
                                   </button>
                                 )}
                               </div>
                             )}
                           </td>
                           <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                            {p.type === "ABSENCE" ? "🚫 --:--" : (p.heureSortie ? (
+                            {p.type === "ABSENCE" ? "--:--" : (p.heureSortie ? (
                               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                <span>🔴 {formatTime(p.heureSortie)}</span>
+                                <span>{formatTime(p.heureSortie)}</span>
                                 {p.photoSortie && (
                                   <button 
                                     type="button" 
@@ -1206,7 +1283,7 @@ export default function DashboardHome() {
                                     onClick={() => setPreviewSelfieModal({ photo: p.photoSortie, title: `Selfie de sortie - ${historyEmployee.fullName}`, time: formatTime(p.heureSortie), date: formattedDate })}
                                     title="Voir la photo de sortie"
                                   >
-                                    📷
+                                    <Camera size={14} />
                                   </button>
                                 )}
                               </div>
@@ -1215,20 +1292,20 @@ export default function DashboardHome() {
                           <td style={{ padding: "12px" }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
                               {p.type === "ABSENCE" ? (
-                                <span className="badge badge-danger" style={{ fontSize: "0.75rem" }}>🚫 Absent</span>
+                                <span className="badge badge-danger" style={{ fontSize: "0.75rem" }}>Absent</span>
                               ) : p.enRetard ? (
-                                <span className="badge badge-warning" style={{ fontSize: "0.75rem" }}>⚠️ Retard</span>
+                                <span className="badge badge-warning" style={{ fontSize: "0.75rem" }}>Retard</span>
                               ) : (
-                                <span className="badge badge-success" style={{ fontSize: "0.75rem" }}>🟢 À temps</span>
+                                <span className="badge badge-success" style={{ fontSize: "0.75rem" }}>À temps</span>
                               )}
                               {p.sortieAnticipee && (
                                 <span className="badge" style={{ fontSize: "0.75rem", background: "rgba(244, 63, 94, 0.15)", color: "var(--danger)", border: "1px solid rgba(244, 63, 94, 0.2)" }}>
-                                  🚪 Sortie Anticipée
+                                  Sortie Anticipée
                                 </span>
                               )}
                               {p.heuresInsuffisantes && p.type !== "ABSENCE" && (
                                 <span className="badge" style={{ fontSize: "0.75rem", background: "rgba(245, 158, 11, 0.15)", color: "var(--warning)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
-                                  ⏱️ Heures &lt; 8h
+                                  Heures &lt; 8h
                                 </span>
                               )}
                             </div>
@@ -1236,10 +1313,43 @@ export default function DashboardHome() {
                           <td style={{ padding: "12px", color: "#fff", fontWeight: "500" }}>
                             {p.type === "ABSENCE" ? "-" : formatDuration(p.dureeMinutes)}
                           </td>
-                          <td style={{ padding: "12px", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
-                            {p.note || "-"}
-                          </td>
-                        </tr>
+                           <td style={{ padding: "12px", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
+                             {p.note || "-"}
+                             {p.modifiedByAdminName && (
+                               <div style={{ fontSize: "0.68rem", color: "var(--primary)", marginTop: "3px" }} title={`Modifié le ${new Date(p.modifiedAt).toLocaleString()}`}>
+                                 Ajusté par {p.modifiedByAdminName}
+                               </div>
+                             )}
+                           </td>
+                           <td style={{ padding: "12px" }}>
+                             {(!p.heureSortie || p.type === "ABSENCE") ? (
+                               <button
+                                 type="button"
+                                 className="btn btn-secondary"
+                                 style={{
+                                   padding: "4px 8px",
+                                   fontSize: "0.7rem",
+                                   borderRadius: "4px",
+                                   background: "rgba(139, 92, 246, 0.1)",
+                                   borderColor: "rgba(139, 92, 246, 0.2)",
+                                   color: "var(--primary)",
+                                   display: "inline-flex",
+                                   alignItems: "center",
+                                   gap: "4px",
+                                   cursor: "pointer"
+                                 }}
+                                 onClick={() => handleOpenEditPointage(p)}
+                               >
+                                 <Pencil size={10} />
+                                 Régulariser
+                               </button>
+                             ) : (
+                               <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", background: "rgba(255, 255, 255, 0.05)", padding: "2px 6px", borderRadius: "4px" }}>
+                                 Complète
+                               </span>
+                             )}
+                           </td>
+                         </tr>
                       );
                     })}
                   </tbody>
@@ -1311,6 +1421,189 @@ export default function DashboardHome() {
               <span>Heure: <strong>{previewSelfieModal.time}</strong></span>
               {previewSelfieModal.date && <span>Date: <strong>{previewSelfieModal.date}</strong></span>}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✍️ MODAL DE REGULARISATION MANUELLE DE POINTAGE */}
+      {showEditPointageModal && editingPointage && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0, 0, 0, 0.7)",
+          backdropFilter: "blur(12px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 10000,
+          padding: "20px"
+        }}>
+          <div className="glass-card" style={{
+            maxWidth: "480px",
+            width: "100%",
+            background: "rgba(18, 20, 29, 0.85)",
+            padding: "28px",
+            borderRadius: "16px",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6)",
+            animation: "fadeIn 0.2s ease"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "12px" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#fff", margin: 0 }}>
+                Régulariser le pointage
+              </h3>
+              <button
+                type="button"
+                style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", display: "flex", padding: 0 }}
+                onClick={() => setShowEditPointageModal(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditPointageSubmit}>
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "6px", fontWeight: "500" }}>
+                  Date du pointage (Lecture seule)
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={new Date(editingPointage.date).toLocaleDateString("fr-FR", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255, 255, 255, 0.03)",
+                    color: "var(--text-muted)",
+                    border: "1px solid rgba(255, 255, 255, 0.05)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.9rem",
+                    outline: "none"
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "6px", fontWeight: "500" }}>
+                  Type de Pointage
+                </label>
+                <select
+                  required
+                  value={editForm.type}
+                  onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    color: "#fff",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.9rem",
+                    outline: "none"
+                  }}
+                >
+                  <option value="ENTREE" style={{ background: "#12141d" }}>ENTREE (Présence)</option>
+                  <option value="SORTIE" style={{ background: "#12141d" }}>SORTIE</option>
+                  <option value="ABSENCE" style={{ background: "#12141d" }}>ABSENCE (Non justifiée/Justifiée)</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "6px", fontWeight: "500" }}>
+                  Heure d'entrée
+                </label>
+                <input
+                  type="datetime-local"
+                  required={editForm.type !== "ABSENCE"}
+                  value={editForm.heureEntree}
+                  onChange={(e) => setEditForm({ ...editForm, heureEntree: e.target.value })}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    color: "#fff",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.9rem",
+                    outline: "none"
+                  }}
+                />
+              </div>
+
+              {editForm.type !== "ABSENCE" && (
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "6px", fontWeight: "500" }}>
+                    Heure de sortie (facultatif si non encore pointé)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={editForm.heureSortie}
+                    onChange={(e) => setEditForm({ ...editForm, heureSortie: e.target.value })}
+                    style={{
+                      width: "100%",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "#fff",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      fontSize: "0.9rem",
+                      outline: "none"
+                    }}
+                  />
+                </div>
+              )}
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "6px", fontWeight: "500" }}>
+                  Note / Motif d'ajustement
+                </label>
+                <textarea
+                  rows="3"
+                  value={editForm.note}
+                  onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                  placeholder="Pourquoi ce pointage est modifié ?"
+                  style={{
+                    width: "100%",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    color: "#fff",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    resize: "none"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "16px" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: "10px 20px", fontSize: "0.85rem" }}
+                  onClick={() => setShowEditPointageModal(false)}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={submittingEdit}
+                  style={{ padding: "10px 20px", fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "8px" }}
+                >
+                  {submittingEdit ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : "Confirmer"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

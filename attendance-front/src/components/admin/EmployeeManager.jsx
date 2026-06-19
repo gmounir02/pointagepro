@@ -14,7 +14,9 @@ import {
   ShieldCheck, 
   Filter,
   Calendar,
-  Clock
+  Clock,
+  Pencil,
+  Loader2
 } from "lucide-react";
 
 export default function EmployeeManager() {
@@ -34,6 +36,12 @@ export default function EmployeeManager() {
   const [historyEmployee, setHistoryEmployee] = useState(null);
   const [historyPointages, setHistoryPointages] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Edit Pointage States
+  const [showEditPointageModal, setShowEditPointageModal] = useState(false);
+  const [editingPointage, setEditingPointage] = useState(null);
+  const [editForm, setEditForm] = useState({ heureEntree: "", heureSortie: "", type: "", note: "" });
+  const [submittingEdit, setSubmittingEdit] = useState(false);
 
   // Form State
   const [firstName, setFirstName] = useState("");
@@ -62,6 +70,70 @@ export default function EmployeeManager() {
       showNotification("Impossible de charger l'historique de cet employé", "danger");
     } finally {
       setLoadingHistory(false);
+    }
+  };
+
+  const handleOpenEditPointage = (p) => {
+    // Règle métier : Une session complète ne peut pas être modifiée
+    if (p.heureEntree && p.heureSortie && p.type !== "ABSENCE") {
+      showNotification("Une session complète ne peut pas être modifiée.", "warning");
+      return;
+    }
+
+    setEditingPointage(p);
+
+    const formatForInput = (dtStr) => {
+      if (!dtStr) return "";
+      const d = new Date(dtStr);
+      if (isNaN(d.getTime())) return "";
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    setEditForm({
+      heureEntree: formatForInput(p.heureEntree),
+      heureSortie: formatForInput(p.heureSortie),
+      type: p.type || "ENTREE",
+      note: p.note || ""
+    });
+    setShowEditPointageModal(true);
+  };
+
+  const handleEditPointageSubmit = async (e) => {
+    e.preventDefault();
+    setSubmittingEdit(true);
+    try {
+      if (editForm.heureEntree && editForm.heureSortie) {
+        if (new Date(editForm.heureEntree) > new Date(editForm.heureSortie)) {
+          showNotification("L'heure de sortie doit être après l'heure d'entrée", "danger");
+          setSubmittingEdit(false);
+          return;
+        }
+      }
+
+      await api.pointages.adminModifier(editingPointage.id, {
+        userId: editingPointage.userId || historyEmployee?.id,
+        heureEntree: editForm.heureEntree ? editForm.heureEntree : null,
+        heureSortie: editForm.heureSortie ? editForm.heureSortie : null,
+        type: editForm.type,
+        note: editForm.note
+      });
+
+      showNotification("Pointage régularisé avec succès !", "success");
+      setShowEditPointageModal(false);
+
+      // Refresh employee history
+      if (historyEmployee) {
+        const data = await api.pointages.getByUser(historyEmployee.id);
+        if (data) {
+          const sorted = data.sort((a, b) => new Date(b.date) - new Date(a.date));
+          setHistoryPointages(sorted);
+        }
+      }
+    } catch (err) {
+      showNotification(err.message || "Erreur lors de la modification du pointage", "danger");
+    } finally {
+      setSubmittingEdit(false);
     }
   };
 
@@ -533,6 +605,7 @@ export default function EmployeeManager() {
                       <th style={{ textAlign: "left", padding: "12px" }}>Statut</th>
                       <th style={{ textAlign: "left", padding: "12px" }}>Durée</th>
                       <th style={{ textAlign: "left", padding: "12px" }}>Notes</th>
+                      <th style={{ textAlign: "left", padding: "12px" }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -565,14 +638,14 @@ export default function EmployeeManager() {
                             {formattedDate}
                           </td>
                           <td style={{ padding: "12px", color: p.type === "ABSENCE" ? "var(--text-muted)" : "#fff" }}>
-                            {p.type === "ABSENCE" ? "🚫 --:--" : `🟢 ${formatTime(p.heureEntree)}`}
+                            {p.type === "ABSENCE" ? "--:--" : formatTime(p.heureEntree)}
                           </td>
                           <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                            {p.type === "ABSENCE" ? "🚫 --:--" : (p.heureSortie ? `🔴 ${formatTime(p.heureSortie)}` : "Non pointé")}
+                            {p.type === "ABSENCE" ? "--:--" : (p.heureSortie ? formatTime(p.heureSortie) : "Non pointé")}
                           </td>
                           <td style={{ padding: "12px" }}>
                             {p.type === "ABSENCE" ? (
-                              <span className="badge badge-danger" style={{ fontSize: "0.75rem" }}>🚫 Absent</span>
+                              <span className="badge badge-danger" style={{ fontSize: "0.75rem" }}>Absent</span>
                             ) : p.enRetard ? (
                               <span className="badge badge-warning" style={{ fontSize: "0.75rem" }}>Retard</span>
                             ) : (
@@ -582,16 +655,231 @@ export default function EmployeeManager() {
                           <td style={{ padding: "12px", color: "#fff", fontWeight: "500" }}>
                             {p.type === "ABSENCE" ? "-" : formatDuration(p.dureeMinutes)}
                           </td>
-                          <td style={{ padding: "12px", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
-                            {p.note || "-"}
-                          </td>
-                        </tr>
+                           <td style={{ padding: "12px", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
+                             {p.note || "-"}
+                             {p.modifiedByAdminName && (
+                               <div style={{ fontSize: "0.68rem", color: "var(--primary)", marginTop: "3px" }} title={`Modifié le ${new Date(p.modifiedAt).toLocaleString()}`}>
+                                 Ajusté par {p.modifiedByAdminName}
+                               </div>
+                             )}
+                           </td>
+                           <td style={{ padding: "12px" }}>
+                             {(!p.heureSortie || p.type === "ABSENCE") ? (
+                               <button
+                                 type="button"
+                                 className="btn btn-secondary"
+                                 style={{
+                                   padding: "4px 8px",
+                                   fontSize: "0.7rem",
+                                   borderRadius: "4px",
+                                   background: "rgba(139, 92, 246, 0.1)",
+                                   borderColor: "rgba(139, 92, 246, 0.2)",
+                                   color: "var(--primary)",
+                                   display: "inline-flex",
+                                   alignItems: "center",
+                                   gap: "4px",
+                                   cursor: "pointer"
+                                 }}
+                                 onClick={() => handleOpenEditPointage(p)}
+                               >
+                                 <Pencil size={10} />
+                                 Régulariser
+                               </button>
+                             ) : (
+                               <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", background: "rgba(255, 255, 255, 0.05)", padding: "2px 6px", borderRadius: "4px" }}>
+                                 Complète
+                               </span>
+                             )}
+                           </td>
+                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {/* ✍️ MODAL DE REGULARISATION MANUELLE DE POINTAGE */}
+      {showEditPointageModal && editingPointage && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0, 0, 0, 0.7)",
+          backdropFilter: "blur(12px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 10000,
+          padding: "20px"
+        }}>
+          <div className="glass-card" style={{
+            maxWidth: "480px",
+            width: "100%",
+            background: "rgba(18, 20, 29, 0.85)",
+            padding: "28px",
+            borderRadius: "16px",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6)",
+            animation: "fadeIn 0.2s ease"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "12px" }}>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#fff", margin: 0 }}>
+                Régulariser le pointage
+              </h3>
+              <button
+                type="button"
+                style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", display: "flex", padding: 0 }}
+                onClick={() => setShowEditPointageModal(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditPointageSubmit}>
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "6px", fontWeight: "500" }}>
+                  Date du pointage (Lecture seule)
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={new Date(editingPointage.date).toLocaleDateString("fr-FR", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255, 255, 255, 0.03)",
+                    color: "var(--text-muted)",
+                    border: "1px solid rgba(255, 255, 255, 0.05)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.9rem",
+                    outline: "none"
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "6px", fontWeight: "500" }}>
+                  Type de Pointage
+                </label>
+                <select
+                  required
+                  value={editForm.type}
+                  onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    color: "#fff",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.9rem",
+                    outline: "none"
+                  }}
+                >
+                  <option value="ENTREE" style={{ background: "#12141d" }}>ENTREE (Présence)</option>
+                  <option value="SORTIE" style={{ background: "#12141d" }}>SORTIE</option>
+                  <option value="ABSENCE" style={{ background: "#12141d" }}>ABSENCE (Non justifiée/Justifiée)</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "6px", fontWeight: "500" }}>
+                  Heure d'entrée
+                </label>
+                <input
+                  type="datetime-local"
+                  required={editForm.type !== "ABSENCE"}
+                  value={editForm.heureEntree}
+                  onChange={(e) => setEditForm({ ...editForm, heureEntree: e.target.value })}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    color: "#fff",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.9rem",
+                    outline: "none"
+                  }}
+                />
+              </div>
+
+              {editForm.type !== "ABSENCE" && (
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "6px", fontWeight: "500" }}>
+                    Heure de sortie (facultatif si non encore pointé)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={editForm.heureSortie}
+                    onChange={(e) => setEditForm({ ...editForm, heureSortie: e.target.value })}
+                    style={{
+                      width: "100%",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "#fff",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      fontSize: "0.9rem",
+                      outline: "none"
+                    }}
+                  />
+                </div>
+              )}
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "6px", fontWeight: "500" }}>
+                  Note / Motif d'ajustement
+                </label>
+                <textarea
+                  rows="3"
+                  value={editForm.note}
+                  onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                  placeholder="Pourquoi ce pointage est modifié ?"
+                  style={{
+                    width: "100%",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    color: "#fff",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    resize: "none"
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "16px" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: "10px 20px", fontSize: "0.85rem" }}
+                  onClick={() => setShowEditPointageModal(false)}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={submittingEdit}
+                  style={{ padding: "10px 20px", fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "8px" }}
+                >
+                  {submittingEdit ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : "Confirmer"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
