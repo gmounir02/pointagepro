@@ -247,14 +247,30 @@ Contrairement aux anciennes versions à usage unique, un QR Code généré par l
 * **Validité temporelle** : Le QR reste actif pour tous les employés tant que `LocalDateTime.now().isBefore(expiresAt)`.
 * **Aucun blocage après premier scan** : Le champ `used` n'invalide plus le code. Il sert uniquement d'indicateur. Le backend met à jour les champs `usedByUserId`, `usedByUserEmail`, `usedByUserName` et `usedAt` lors du dernier scan pour permettre un suivi et un audit en temps réel par l'administrateur.
 
-### 5.3 Reconnaissance Faciale Conditionnelle & Effet Miroir
-Lors du scan d'un QR code, l'application frontend vérifie via API les exigences du code scanné.
-* **Si `faceVerificationRequired` est à `true`** :
-  * Le panneau caméra frontale s'active automatiquement.
-  * L'image de la caméra frontale est inversée horizontalement en CSS (`transform: scaleX(-1)`) pour offrir un rendu miroir naturel.
-  * L'application charge en arrière-plan les modèles de `face-api.js` depuis un CDN sécurisé.
-  * Elle effectue une détection du visage en direct, génère un descripteur vectoriel de 128 valeurs et le compare à la photo de profil officielle stockée dans la fiche utilisateur.
-  * Si la similarité est suffisante, le pointage est validé. Si l'utilisateur n'a pas configuré sa photo de profil, l'application bascule sur un mode de validation permissif tout en avertissant l'utilisateur.
+### 5.3 Reconnaissance Faciale Conditionnelle & Détails Techniques (face-api.js)
+Lors du scan d'un QR code, l'application frontend interroge l'API pour connaître les exigences du code scanné. Si le champ `faceVerificationRequired` est à `true`, le module de vérification faciale s'active automatiquement dans le navigateur de l'employé.
+
+#### A. Les Modèles de Réseaux de Neurones Utilisés (TensorFlow.js)
+L'application charge de manière asynchrone des modèles d'apprentissage profond pré-entraînés depuis un CDN sécurisé :
+* **`ssdMobilenetv1`** (Single Shot Multibox Detector avec architecture MobileNet) : Détecte l'emplacement du visage dans le flux vidéo de la caméra et dessine une boîte de délimitation (bounding box).
+* **`faceLandmark68Net`** : Identifie **68 points d'ancrage caractéristiques** (les repères faciaux : contour des yeux, sourcils, nez, bouche, mâchoire) pour redresser et aligner le visage même en cas de légère inclinaison.
+* **`faceRecognitionNet`** (basé sur une architecture de type ResNet-34) : Extrait la signature unique du visage pour générer un **descripteur de 128 dimensions** (vecteur d'empreinte faciale).
+
+#### B. Algorithme de Comparaison Faciale
+1. **Extraction de Référence (Officielle)** : Au chargement de l'espace de pointage, la photo de profil officielle stockée en Base64 (`photoProfile` dans la collection `users`) est analysée par les réseaux de neurones pour calculer son vecteur de référence $V_{\text{ref}}$ (128 valeurs décimales).
+2. **Capture Temps Réel** : Lors du clic de pointage, un instantané est capturé depuis le flux de la webcam frontale. L'IA détecte le visage présent et extrait son propre vecteur de capture $V_{\text{cap}}$.
+3. **Calcul de Distance Euclidienne** : L'IA calcule la distance euclidienne entre ces deux vecteurs dans l'espace à 128 dimensions :
+   $$d(V_{\text{ref}}, V_{\text{cap}}) = \sqrt{\sum_{i=1}^{128} (V_{\text{ref}, i} - V_{\text{cap}, i})^2}$$
+   * **Seuil de tolérance (Threshold)** : Le seuil de correspondance est configuré à **`0.6`** par défaut.
+   * **Validation** : Si la distance calculée est **strictement inférieure à `0.6`**, la similarité est jugée suffisante (le visage correspond à la photo de profil) et le pointage est autorisé. Sinon, l'accès est refusé.
+
+#### C. Expérience Utilisateur et Effet Miroir
+* **Ajustement Visuel** : Par défaut, l'affichage de la caméra frontale sur les appareils mobiles ou ordinateurs apparaît inversé à l'utilisateur, ce qui n'est pas naturel pour s'ajuster. Le flux vidéo de la caméra frontale est stylisé en CSS avec une transformation de symétrie horizontale : `transform: scaleX(-1);`.
+* **Vidéoprotection intégrée** : La photo capturée au moment précis du pointage est encodée en Base64 et stockée dans l'enregistrement de présence (champs `photoEntree` ou `photoSortie` dans la collection `pointages`). Cela permet aux administrateurs de réaliser des audits manuels en cas de doute.
+
+#### D. Modes de Repli (Fallback)
+* **Absence de photo officielle** : Si aucun portrait n'a encore été téléversé pour le collaborateur, le système bascule dans un mode permissif. Il autorise le pointage tout en affichant un badge d'avertissement informatif indiquant que la vérification faciale a été contournée en l'absence de fichier source.
+* **Échec d'initialisation de l'IA** : Si les modèles ne peuvent pas être chargés (panne réseau, blocage CDN, navigateur non compatible), le système bascule sur un mode de secours pour ne pas pénaliser l'employé, permettant le pointage tout en enregistrant l'incident dans les logs.
 
 ### 5.4 Synthèse des Absences ("En attente" vs "Absent")
 Pour éviter de pénaliser les collaborateurs en les qualifiant d'absents dès le matin :
