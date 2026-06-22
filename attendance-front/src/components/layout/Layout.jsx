@@ -188,7 +188,7 @@ export default function Layout({ activeTab, setActiveTab, children }) {
       {/* 💻 DESKTOP SIDEBAR */}
       <aside className="sidebar-desktop" style={styles.sidebar}>
         <div style={styles.logoArea}>
-          <Fingerprint size={28} color="var(--primary)" />
+          <img src="/favicon.svg" alt="Logo" style={{ width: "28px", height: "28px" }} />
           <span style={styles.logoText}>ATTENDANCE</span>
         </div>
 
@@ -331,7 +331,7 @@ export default function Layout({ activeTab, setActiveTab, children }) {
         {/* 📱 MOBILE HEADER & BOTTOM NAV */}
         <header style={styles.mobileHeader}>
           <div style={styles.mobileHeaderLeft}>
-            <Fingerprint size={22} color="var(--primary)" />
+            <img src="/favicon.svg" alt="Logo" style={{ width: "22px", height: "22px" }} />
             <span style={styles.mobileHeaderTitle}>{activeItem?.label}</span>
           </div>
           

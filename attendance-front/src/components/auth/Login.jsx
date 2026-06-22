@@ -33,7 +33,7 @@ export default function Login() {
       <div className="glass-card" style={styles.card}>
         <div style={styles.header}>
           <div style={styles.logoContainer}>
-            <Fingerprint size={44} color="var(--primary)" className="animate-spin-slow" />
+            <img src="/favicon.svg" alt="Logo" style={{ width: "44px", height: "44px" }} />
           </div>
           <h2 style={styles.title}>ATTENDANCE SYSTEM</h2>
           <p style={styles.subtitle}>Système Intelligent de Gestion de Présence</p>
