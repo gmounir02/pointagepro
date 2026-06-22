@@ -571,8 +571,7 @@ const styles = {
     background: "rgba(10, 11, 16, 0.35)",
     backdropFilter: "blur(var(--glass-blur))",
     borderBottom: "1px solid var(--border-color)",
-    position: "sticky",
-    top: 0,
+    position: "relative",
     zIndex: 100,
   },
   desktopHeaderTitle: {

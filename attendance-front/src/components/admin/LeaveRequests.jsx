@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { api } from "../../services/api";
 import { useNotification } from "../../context/GlobalContext";
 import { 
@@ -37,6 +37,22 @@ export default function LeaveRequests() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null); // null = all 12 months, 0-11 = single zoomed month
+
+  const detailsRef = useRef(null);
+
+  const handleDayClick = (dateStr) => {
+    const isSelected = selectedDate === dateStr;
+    const nextDate = isSelected ? null : dateStr;
+    setSelectedDate(nextDate);
+    
+    if (nextDate) {
+      setTimeout(() => {
+        if (detailsRef.current) {
+          detailsRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 80);
+    }
+  };
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -223,7 +239,7 @@ export default function LeaveRequests() {
           key={`day-${day}`}
           type="button"
           style={cellStyle}
-          onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+          onClick={() => handleDayClick(dateStr)}
           disabled={dayLeaves.length === 0}
         >
           {day}
@@ -402,7 +418,7 @@ export default function LeaveRequests() {
           </div>
 
           {/* Right section: Day Detail Sidebar */}
-          <div style={styles.calendarRightSection}>
+          <div ref={detailsRef} style={styles.calendarRightSection}>
             <div className="glass-card" style={styles.detailsPane}>
               <div style={styles.detailsHeader}>
                 {selectedDate 
