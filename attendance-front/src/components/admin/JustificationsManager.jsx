@@ -16,6 +16,7 @@ import {
 export default function JustificationsManager() {
   const { showNotification } = useNotification();
   const [justifications, setJustifications] = useState([]);
+  const [viewMode, setViewMode] = useState("pending"); // "pending" | "history"
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [processingId, setProcessingId] = useState(null);
@@ -23,7 +24,9 @@ export default function JustificationsManager() {
   const fetchJustifications = async () => {
     setLoading(true);
     try {
-      const data = await api.pointages.getJustificationsEnAttente();
+      const data = (viewMode === "pending")
+        ? await api.pointages.getJustificationsEnAttente()
+        : await api.pointages.getAllJustifications();
       if (data) {
         // Sort descending by date
         const sorted = data.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -38,7 +41,8 @@ export default function JustificationsManager() {
 
   useEffect(() => {
     fetchJustifications();
-  }, []);
+    setSearchQuery("");
+  }, [viewMode]);
 
   const handleModerate = async (id, status) => {
     setProcessingId(id);
@@ -48,8 +52,12 @@ export default function JustificationsManager() {
         ? "La justification a ete approuvee" 
         : "La justification a ete refusee";
       showNotification(successMessage, status === "APPROUVEE" ? "success" : "warning");
-      // Remove from list
-      setJustifications(prev => prev.filter(j => j.id !== id));
+      
+      if (viewMode === "pending") {
+        setJustifications(prev => prev.filter(j => j.id !== id));
+      } else {
+        setJustifications(prev => prev.map(j => j.id === id ? { ...j, statutJustification: status } : j));
+      }
     } catch (err) {
       showNotification(err.message || "Erreur de traitement", "danger");
     } finally {
@@ -106,6 +114,28 @@ export default function JustificationsManager() {
           <ShieldAlert size={24} color="var(--primary)" />
           <h2 style={styles.title}>Moderation des Justifications</h2>
         </div>
+        <div style={styles.tabSwitcher}>
+          <button
+            type="button"
+            style={{
+              ...styles.tabBtn,
+              ...(viewMode === "pending" ? styles.tabBtnActive : {}),
+            }}
+            onClick={() => setViewMode("pending")}
+          >
+            En Attente
+          </button>
+          <button
+            type="button"
+            style={{
+              ...styles.tabBtn,
+              ...(viewMode === "history" ? styles.tabBtnActive : {}),
+            }}
+            onClick={() => setViewMode("history")}
+          >
+            Historique Complet
+          </button>
+        </div>
       </div>
 
       {/* Search and Stats */}
@@ -122,7 +152,9 @@ export default function JustificationsManager() {
             />
           </div>
           <div style={styles.statsBadge}>
-            {justifications.length} demande(s) en attente
+            {viewMode === "pending"
+              ? `${justifications.length} demande(s) en attente`
+              : `${justifications.length} justification(s) au total`}
           </div>
         </div>
       )}
@@ -134,11 +166,13 @@ export default function JustificationsManager() {
       ) : filteredJustifications.length === 0 ? (
         <div className="glass-card" style={styles.emptyCard}>
           <Info size={36} color="var(--text-muted)" style={{ marginBottom: "12px" }} />
-          <h3>Aucune justification a moderer</h3>
+          <h3>Aucune justification trouvee</h3>
           <p style={{ color: "var(--text-secondary)", marginTop: "6px" }}>
             {searchQuery 
               ? "Aucune justification ne correspond a votre recherche."
-              : "Toutes les justifications soumises ont ete traitees."}
+              : viewMode === "pending"
+                ? "Toutes les justifications soumises ont ete traitees."
+                : "Aucun historique de justification disponible."}
           </p>
         </div>
       ) : (
@@ -156,10 +190,15 @@ export default function JustificationsManager() {
                   </div>
                 </div>
 
-                <div>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   <span className={`badge ${j.type === "ABSENCE" ? "badge-danger" : "badge-warning"}`} style={{ textTransform: "none" }}>
                     {j.type === "ABSENCE" ? "Absence" : "Retard"}
                   </span>
+                  {j.statutJustification && j.statutJustification !== "EN_ATTENTE" && (
+                    <span className={`badge ${j.statutJustification === "APPROUVEE" ? "badge-success" : "badge-danger"}`}>
+                      {j.statutJustification === "APPROUVEE" ? "Approuvee" : "Refusee"}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -203,28 +242,30 @@ export default function JustificationsManager() {
                 )}
               </div>
 
-              <div style={styles.actionRowEnd}>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  style={styles.actionBtn}
-                  disabled={processingId !== null}
-                  onClick={() => handleModerate(j.id, "REJETEE")}
-                >
-                  <XCircle size={16} />
-                  Refuser
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-success"
-                  style={styles.actionBtn}
-                  disabled={processingId !== null}
-                  onClick={() => handleModerate(j.id, "APPROUVEE")}
-                >
-                  <CheckCircle size={16} />
-                  Accepter
-                </button>
-              </div>
+              {j.statutJustification === "EN_ATTENTE" && (
+                <div style={styles.actionRowEnd}>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    style={styles.actionBtn}
+                    disabled={processingId !== null}
+                    onClick={() => handleModerate(j.id, "REJETEE")}
+                  >
+                    <XCircle size={16} />
+                    Refuser
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-success"
+                    style={styles.actionBtn}
+                    disabled={processingId !== null}
+                    onClick={() => handleModerate(j.id, "APPROUVEE")}
+                  >
+                    <CheckCircle size={16} />
+                    Accepter
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -244,6 +285,8 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: "28px",
+    flexWrap: "wrap",
+    gap: "16px",
   },
   headerTitleArea: {
     display: "flex",
@@ -253,6 +296,29 @@ const styles = {
   title: {
     fontSize: "1.5rem",
     fontWeight: "700",
+    color: "#fff",
+  },
+  tabSwitcher: {
+    display: "flex",
+    gap: "6px",
+    background: "rgba(0, 0, 0, 0.2)",
+    padding: "4px",
+    borderRadius: "8px",
+    border: "1px solid rgba(255, 255, 255, 0.05)",
+  },
+  tabBtn: {
+    background: "none",
+    border: "none",
+    padding: "8px 16px",
+    fontSize: "0.85rem",
+    fontWeight: "600",
+    color: "var(--text-secondary)",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+  tabBtnActive: {
+    background: "var(--primary)",
     color: "#fff",
   },
   actionRow: {

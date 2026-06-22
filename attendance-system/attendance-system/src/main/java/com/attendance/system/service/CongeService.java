@@ -77,6 +77,7 @@ public class CongeService {
 
         conge.setStatut(approuve ? Conge.StatutConge.APPROUVE : Conge.StatutConge.REFUSE);
         conge.setAdminId(admin.getId());
+        conge.setAdminFullName(admin.getFirstName() + " " + admin.getLastName());
         conge.setCommentaireAdmin(commentaire);
         conge.setUpdatedAt(LocalDateTime.now());
 

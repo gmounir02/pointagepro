@@ -19,6 +19,7 @@ export default function LeaveRequests() {
   const { showNotification } = useNotification();
   const [requests, setRequests] = useState([]);
   const [viewMode, setViewMode] = useState("pending"); // "pending" | "history" | "calendar"
+  const [statusFilter, setStatusFilter] = useState("ALL"); // "ALL" | "APPROUVE" | "REFUSE" | "EN_ATTENTE"
   const [loading, setLoading] = useState(true);
 
   // Decision Modal State
@@ -59,6 +60,7 @@ export default function LeaveRequests() {
     setSelectedDate(null);
     setSelectedMonth(null);
     setSearchQuery(""); // Reset search query on tab change
+    setStatusFilter("ALL"); // Reset status filter on tab change
   }, [viewMode]);
 
   const openDecisionModal = (requestId, employeeName, isApprove) => {
@@ -121,15 +123,19 @@ export default function LeaveRequests() {
     return date.toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" });
   };
 
-  // Filter requests array by search query for lists
+  // Filter requests array by search query and status filter for lists
   const filteredRequests = React.useMemo(() => {
-    if (!searchQuery) return requests;
+    let list = requests;
+    if (viewMode === "history" && statusFilter !== "ALL") {
+      list = list.filter((r) => r.statut === statusFilter);
+    }
+    if (!searchQuery) return list;
     const query = searchQuery.toLowerCase();
-    return requests.filter((r) => 
+    return list.filter((r) => 
       (r.userFullName && r.userFullName.toLowerCase().includes(query)) ||
       (r.userId && r.userId.toLowerCase().includes(query))
     );
-  }, [requests, searchQuery]);
+  }, [requests, searchQuery, statusFilter, viewMode]);
 
   // Pre-process conges for fast calendar lookup
   const leavesMap = React.useMemo(() => {
@@ -299,7 +305,7 @@ export default function LeaveRequests() {
 
       {/* Global Search Bar (shown for all views when loaded) */}
       {!loading && (
-        <div style={{ marginBottom: "20px", display: "flex", justifyContent: "flex-start" }}>
+        <div style={{ marginBottom: "20px", display: "flex", justifyContent: "flex-start", gap: "12px", flexWrap: "wrap" }}>
           <div style={styles.searchContainer}>
             <Search size={16} style={styles.searchIcon} />
             <input
@@ -313,6 +319,27 @@ export default function LeaveRequests() {
               }}
             />
           </div>
+          {viewMode === "history" && (
+            <select
+              style={{
+                background: "rgba(255, 255, 255, 0.05)",
+                color: "#fff",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "8px",
+                padding: "10px 14px",
+                fontSize: "0.9rem",
+                outline: "none",
+                cursor: "pointer"
+              }}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="ALL" style={{ background: "#12141d" }}>Tous les statuts</option>
+              <option value="APPROUVE" style={{ background: "#12141d" }}>Approuves</option>
+              <option value="REFUSE" style={{ background: "#12141d" }}>Refuses</option>
+              <option value="EN_ATTENTE" style={{ background: "#12141d" }}>En attente</option>
+            </select>
+          )}
         </div>
       )}
 
@@ -426,6 +453,30 @@ export default function LeaveRequests() {
                           <em>&ldquo;{leave.motif}&rdquo;</em>
                         </div>
                       )}
+                      
+                      {leave.statut !== "EN_ATTENTE" && (
+                        <div style={{ 
+                          marginTop: "8px", 
+                          paddingTop: "8px", 
+                          borderTop: "1px dashed rgba(255,255,255,0.08)",
+                          fontSize: "0.75rem",
+                          color: "var(--text-secondary)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "4px"
+                        }}>
+                          {leave.adminFullName && (
+                            <div>
+                              Traite par : <strong>{leave.adminFullName}</strong>
+                            </div>
+                          )}
+                          {leave.commentaireAdmin && (
+                            <div>
+                              Note : &ldquo;{leave.commentaireAdmin}&rdquo;
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Direct moderation actions if pending */}
                       {leave.statut === "EN_ATTENTE" && (
@@ -513,12 +564,34 @@ export default function LeaveRequests() {
                   <p style={styles.motifText}>&ldquo;{r.motif}&rdquo;</p>
                 </div>
 
-                {r.commentaireAdmin && (
-                  <div style={styles.commentBlock}>
-                    <MessageSquare size={14} color="var(--primary)" />
-                    <div style={styles.commentText}>
-                      <strong>Note d'arbitrage :</strong> {r.commentaireAdmin}
-                    </div>
+                {r.statut !== "EN_ATTENTE" && (
+                  <div style={{ 
+                    marginTop: "12px", 
+                    padding: "10px 14px", 
+                    background: "rgba(255, 255, 255, 0.02)", 
+                    border: "1px solid rgba(255, 255, 255, 0.04)", 
+                    borderRadius: "6px",
+                    fontSize: "0.8rem",
+                    color: "var(--text-secondary)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px"
+                  }}>
+                    {r.adminFullName && (
+                      <div>
+                        Traite par : <strong>{r.adminFullName}</strong>
+                      </div>
+                    )}
+                    {r.updatedAt && (
+                      <div>
+                        Date de decision : <strong>{formatDateLong(r.updatedAt.substring(0, 10))}</strong> a <strong>{r.updatedAt.substring(11, 16)}</strong>
+                      </div>
+                    )}
+                    {r.commentaireAdmin && (
+                      <div style={{ marginTop: "4px", borderTop: "1px solid rgba(255, 255, 255, 0.04)", paddingTop: "6px" }}>
+                        <strong>Note d'arbitrage :</strong> &ldquo;{r.commentaireAdmin}&rdquo;
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

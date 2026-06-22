@@ -92,6 +92,12 @@ public class PointageController {
         return ResponseEntity.ok(ApiResponse.success(pointageService.getJustificationsEnAttente()));
     }
 
+    @GetMapping("/justifications")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<Pointage>>> getAllJustifications() {
+        return ResponseEntity.ok(ApiResponse.success(pointageService.getAllJustifications()));
+    }
+
     @PostMapping("/generer-absences")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<String>> genererAbsences(

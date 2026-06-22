@@ -35,4 +35,6 @@ public interface PointageRepository extends MongoRepository<Pointage, String> {
     List<Pointage> findPresentEmployesByDate(LocalDate date);
 
     List<Pointage> findByStatutJustification(String statutJustification);
+
+    List<Pointage> findByStatutJustificationIn(List<String> statuts);
 }

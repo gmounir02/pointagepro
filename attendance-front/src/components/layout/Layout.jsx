@@ -30,8 +30,10 @@ export default function Layout({ activeTab, setActiveTab, children }) {
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [photoProfile, setPhotoProfile] = useState(null);
   
-  const dropdownRef = useRef(null);
-  const bellRef = useRef(null);
+  const desktopDropdownRef = useRef(null);
+  const mobileDropdownRef = useRef(null);
+  const desktopBellRef = useRef(null);
+  const mobileBellRef = useRef(null);
 
   // Fetch Profile Photo
   useEffect(() => {
@@ -74,12 +76,15 @@ export default function Layout({ activeTab, setActiveTab, children }) {
   // Click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (
-        dropdownRef.current && 
-        !dropdownRef.current.contains(e.target) &&
-        bellRef.current &&
-        !bellRef.current.contains(e.target)
-      ) {
+      const clickedInsideDesktop = 
+        (desktopDropdownRef.current && desktopDropdownRef.current.contains(e.target)) ||
+        (desktopBellRef.current && desktopBellRef.current.contains(e.target));
+        
+      const clickedInsideMobile = 
+        (mobileDropdownRef.current && mobileDropdownRef.current.contains(e.target)) ||
+        (mobileBellRef.current && mobileBellRef.current.contains(e.target));
+
+      if (!clickedInsideDesktop && !clickedInsideMobile) {
         setShowNotificationsDropdown(false);
       }
     };
@@ -93,6 +98,9 @@ export default function Layout({ activeTab, setActiveTab, children }) {
   }, []);
 
   const handleMarkAsRead = async (id) => {
+    // Optimistic update
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
     try {
       await api.notifications.markAsRead(id);
       fetchNotifications();
@@ -102,12 +110,38 @@ export default function Layout({ activeTab, setActiveTab, children }) {
   };
 
   const handleMarkAllAsRead = async () => {
+    // Optimistic update
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
     try {
       await api.notifications.markAllAsRead();
       fetchNotifications();
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    console.log("Notification clicked:", notif);
+    
+    // 1. Mark as read immediately if not already read
+    if (!notif.read) {
+      handleMarkAsRead(notif.id);
+    }
+
+    // 2. Navigate based on notification type (independent of user role)
+    if (notif.type === "NEW_JUSTIFICATION") {
+      setActiveTab("justifications");
+    } else if (notif.type === "NEW_LEAVE") {
+      setActiveTab("conges");
+    } else if (notif.type === "LEAVE_APPROVED" || notif.type === "LEAVE_REJECTED") {
+      setActiveTab("mes-conges");
+    } else if (notif.type === "JUSTIFICATION_APPROVED" || notif.type === "JUSTIFICATION_REJECTED") {
+      setActiveTab("historique");
+    }
+
+    // 3. Close dropdown
+    setShowNotificationsDropdown(false);
   };
 
   // Admin Sidebar Navigation Items
@@ -196,10 +230,17 @@ export default function Layout({ activeTab, setActiveTab, children }) {
               user?.fullName?.charAt(0) || "U"
             )}
           </div>
-          <div style={{ ...styles.userInfo, marginRight: 0 }}>
+          <div style={styles.userInfo}>
             <div style={styles.userName}>{user?.fullName}</div>
             <div style={styles.userRole}>{isAdmin ? "Administrateur" : "Employé"}</div>
           </div>
+          <button 
+            onClick={logout} 
+            style={styles.logoutBtn} 
+            title="Se déconnecter"
+          >
+            <LogOut size={16} color="var(--danger)" />
+          </button>
         </div>
       </aside>
 
@@ -214,7 +255,7 @@ export default function Layout({ activeTab, setActiveTab, children }) {
 
             {/* Notification Bell */}
             <button 
-              ref={bellRef}
+              ref={desktopBellRef}
               onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
               style={styles.bellButton}
               title="Notifications"
@@ -229,7 +270,7 @@ export default function Layout({ activeTab, setActiveTab, children }) {
 
             {/* Notifications Dropdown menu */}
             {showNotificationsDropdown && (
-              <div ref={dropdownRef} className="glass-card" style={styles.notificationsDropdown}>
+              <div ref={desktopDropdownRef} className="glass-card" style={styles.notificationsDropdown}>
                 <div style={styles.dropdownHeader}>
                   <h4 style={{ margin: 0, color: "#fff", fontSize: "0.95rem", fontWeight: "700" }}>Notifications</h4>
                   {unreadCount > 0 && (
@@ -253,9 +294,11 @@ export default function Layout({ activeTab, setActiveTab, children }) {
                         key={notif.id} 
                         style={{
                           ...styles.notificationItem,
-                          background: notif.read ? "transparent" : "rgba(139, 92, 246, 0.04)"
+                          background: notif.read ? "transparent" : "rgba(139, 92, 246, 0.09)",
+                          borderLeft: notif.read ? "none" : "3px solid var(--primary)",
+                          paddingLeft: notif.read ? "16px" : "13px"
                         }}
-                        onClick={() => !notif.read && handleMarkAsRead(notif.id)}
+                        onClick={() => handleNotificationClick(notif)}
                       >
                         <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
                           <div style={styles.notifIconBox}>
@@ -296,7 +339,7 @@ export default function Layout({ activeTab, setActiveTab, children }) {
 
             {/* Mobile Notification bell */}
             <button 
-              ref={bellRef}
+              ref={mobileBellRef}
               onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
               style={{ ...styles.mobileBellButton, padding: "8px", minWidth: "40px", minHeight: "40px", justifyContent: "center" }}
             >
@@ -310,7 +353,7 @@ export default function Layout({ activeTab, setActiveTab, children }) {
 
             {/* Mobile Notifications Dropdown */}
             {showNotificationsDropdown && (
-              <div ref={dropdownRef} className="glass-card" style={styles.mobileNotificationsDropdown}>
+              <div ref={mobileDropdownRef} className="glass-card" style={styles.mobileNotificationsDropdown}>
                 <div style={styles.dropdownHeader}>
                   <h4 style={{ margin: 0, color: "#fff", fontSize: "0.95rem", fontWeight: "700" }}>Notifications</h4>
                   {unreadCount > 0 && (
@@ -334,9 +377,11 @@ export default function Layout({ activeTab, setActiveTab, children }) {
                         key={notif.id} 
                         style={{
                           ...styles.notificationItem,
-                          background: notif.read ? "transparent" : "rgba(139, 92, 246, 0.04)"
+                          background: notif.read ? "transparent" : "rgba(139, 92, 246, 0.09)",
+                          borderLeft: notif.read ? "none" : "3px solid var(--primary)",
+                          paddingLeft: notif.read ? "16px" : "13px"
                         }}
-                        onClick={() => !notif.read && handleMarkAsRead(notif.id)}
+                        onClick={() => handleNotificationClick(notif)}
                       >
                         <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
                           <div style={styles.notifIconBox}>

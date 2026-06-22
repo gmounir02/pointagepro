@@ -602,6 +602,10 @@ public class PointageService {
         return pointageRepository.save(pointage);
     }
 
+    public List<Pointage> getAllJustifications() {
+        return pointageRepository.findByStatutJustificationIn(java.util.Arrays.asList("EN_ATTENTE", "APPROUVEE", "REJETEE"));
+    }
+
     @org.springframework.scheduling.annotation.Scheduled(cron = "0 59 23 * * *")
     public void scheduledMarquerAbsences() {
         marquerAbsences(LocalDate.now());

@@ -37,6 +37,8 @@ public class Conge {
 
     private String commentaireAdmin;
 
+    private String adminFullName;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

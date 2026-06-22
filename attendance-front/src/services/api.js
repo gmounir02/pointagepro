@@ -1,4 +1,6 @@
-const API_BASE_URL = `https://pointagepro-ml6w.onrender.com/api`;
+const API_BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+  ? "http://localhost:8082/api"
+  : "https://pointagepro-ml6w.onrender.com/api";
 
 /**
  * Common request wrapper to inject headers and handle JSON responses
@@ -118,6 +120,8 @@ export const api = {
       request(`/pointages/${id}/evaluer-justification`, { method: "PATCH", body: { statut } }),
     getJustificationsEnAttente: () =>
       request("/pointages/justifications/en-attente"),
+    getAllJustifications: () =>
+      request("/pointages/justifications"),
     genererAbsences: (date) => 
       request(`/pointages/generer-absences${date ? `?date=${date}` : ""}`, { method: "POST" }),
     adminModifier: (id, data) =>
