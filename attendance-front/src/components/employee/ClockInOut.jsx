@@ -909,24 +909,8 @@ export default function ClockInOut() {
           </form>
         </div>
 
-        {/* RIGHT COLUMN - SIMULATION & INFORMATION PANEL */}
+        {/* RIGHT COLUMN - SIMULATION PANEL */}
         <div style={styles.rightPanel}>
-          {/* Company Config card */}
-          {companyConfig && (
-            <div className="glass-card" style={styles.infoCard}>
-              <div style={styles.infoTitle}>
-                <Info size={16} color="var(--primary)" />
-                <span>Règles de Présence</span>
-              </div>
-              <div style={styles.infoContent}>
-                <p><strong>Lieu autorisé :</strong> {companyConfig.nomEntreprise || "Entreprise"}</p>
-                <p><strong>Rayon GPS :</strong> {companyConfig.rayonMetres || 100} mètres</p>
-                <p><strong>Heure de début :</strong> {companyConfig.heureDebutTravail || "08:30"}</p>
-                <p><strong>Tolérance de retard :</strong> {companyConfig.toleranceRetardMinutes || 0} minutes</p>
-              </div>
-            </div>
-          )}
-
           {/* SIMULATOR CARD */}
           {showSimulator && (
             <div className="glass-card" style={styles.simCard}>
@@ -934,10 +918,6 @@ export default function ClockInOut() {
                 <Compass size={18} color="var(--warning)" />
                 <span style={styles.simTitle}>Pupitre de Test & Simulation</span>
               </div>
-
-              <p style={styles.simDesc}>
-                Utilisez cette zone pour tester le fonctionnement géographique et le pointage directement depuis votre navigateur sans camera/GPS physique.
-              </p>
 
               <div style={styles.simGrid}>
                 <div className="input-group" style={{ marginBottom: "12px" }}>
@@ -971,25 +951,6 @@ export default function ClockInOut() {
                   <MapPin size={16} color="var(--warning)" />
                   Appliquer cette Position
                 </button>
-
-                {companyConfig && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={styles.simResetBtn}
-                    onClick={() => {
-                      setSimLat(companyConfig.latitude.toString());
-                      setSimLon(companyConfig.longitude.toString());
-                      showNotification("Coordonnées réinitialisées sur le siège social !", "info");
-                    }}
-                  >
-                    Téléporter au siège
-                  </button>
-                )}
-              </div>
-              
-              <div style={styles.simTip}>
-                💡 <em>Astuce : Générez un code QR dans l'espace Admin, copiez sa clé UUID (depuis les détails), collez-la à gauche, puis cliquez sur valider avec les coordonnées du siège !</em>
               </div>
             </div>
           )}

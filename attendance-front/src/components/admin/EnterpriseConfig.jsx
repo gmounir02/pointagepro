@@ -275,18 +275,7 @@ export default function EnterpriseConfig() {
         {/* RIGHT COLUMN: INFORMATION SUMMARY */}
         <div style={styles.rightCol}>
 
-          <div className="glass-card" style={styles.helpCard}>
-            <h3 style={styles.helpTitle}>Fonctionnement du Geofencing</h3>
-            <p style={styles.helpDesc}>
-              Ce système utilise la formule mathématique de <strong>Haversine</strong> pour calculer à vol d'oiseau la distance séparant les coordonnées géographiques de l'employé (fournies par son appareil mobile au moment du scan QR) des coordonnées configurées ici pour votre siège.
-            </p>
-            <p style={styles.helpDesc}>
-              Si cette distance surpasse le rayon limite de sécurité configuré, le serveur Spring Boot rejettera immédiatement le pointage avec une exception de périmètre.
-            </p>
-            <div style={styles.tipBlock}>
-              💡 <strong>Conseil de Test :</strong> Pour valider facilement les scans depuis votre bureau sans bouger, vous pouvez copier les coordonnées de votre bureau actuel (via le bouton capturer) ou utiliser les coordonnées factices du simulateur sur le widget de pointage !
-            </div>
-          </div>
+
 
           <div className="glass-card config-logout-card" style={{ ...styles.helpCard, borderColor: "rgba(244, 63, 94, 0.15)", background: "rgba(244, 63, 94, 0.01)" }}>
             <h3 style={{ ...styles.helpTitle, borderBottomColor: "rgba(244, 63, 94, 0.1)" }}>Gestion de Session</h3>
