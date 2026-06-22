@@ -35,7 +35,7 @@ export default function Login() {
           <div style={styles.logoContainer}>
             <img src="/favicon.svg" alt="Logo" style={{ width: "44px", height: "44px" }} />
           </div>
-          <h2 style={styles.title}>ATTENDANCE SYSTEM</h2>
+          <h2 style={styles.title}>ATTENDANCE</h2>
           <p style={styles.subtitle}>Système Intelligent de Gestion de Présence</p>
         </div>
 

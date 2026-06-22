@@ -103,7 +103,7 @@ export default function DashboardHome() {
         </head>
         <body>
           <div class="header-bar">
-            <div class="logo-title">ATTENDANCE SYSTEM</div>
+            <div class="logo-title">ATTENDANCE</div>
             <div class="report-title">Fiche de Présence Individuelle</div>
           </div>
           <div class="meta-grid">
@@ -151,7 +151,7 @@ export default function DashboardHome() {
             </tbody>
           </table>
           <div class="footer">
-            Généré automatiquement par Smart Attendance System - PFA. Fiche certifiée conforme.
+            Généré automatiquement par Attendance. Fiche certifiée conforme.
           </div>
           <script>
             window.onload = function() {
