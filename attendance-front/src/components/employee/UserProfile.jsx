@@ -136,7 +136,7 @@ export default function UserProfile() {
 
           <button 
             onClick={logout} 
-            className="btn btn-danger" 
+            className="btn btn-danger profile-logout-btn" 
             style={{ 
               marginTop: "24px", 
               width: "100%", 
@@ -296,6 +296,14 @@ if (typeof document !== "undefined") {
     }
     .profile-detail-item-wide {
       grid-column: span 2;
+    }
+    .profile-logout-btn {
+      display: flex !important;
+    }
+    @media (min-width: 769px) {
+      .profile-logout-btn {
+        display: none !important;
+      }
     }
     @media (max-width: 768px) {
       .profile-card {

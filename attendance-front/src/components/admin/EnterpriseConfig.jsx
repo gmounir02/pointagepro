@@ -288,7 +288,7 @@ export default function EnterpriseConfig() {
             </div>
           </div>
 
-          <div className="glass-card" style={{ ...styles.helpCard, borderColor: "rgba(244, 63, 94, 0.15)", background: "rgba(244, 63, 94, 0.01)" }}>
+          <div className="glass-card config-logout-card" style={{ ...styles.helpCard, borderColor: "rgba(244, 63, 94, 0.15)", background: "rgba(244, 63, 94, 0.01)" }}>
             <h3 style={{ ...styles.helpTitle, borderBottomColor: "rgba(244, 63, 94, 0.1)" }}>Gestion de Session</h3>
             <p style={styles.helpDesc}>
               Vous êtes connecté en tant qu'administrateur.
@@ -470,6 +470,14 @@ const styles = {
 if (typeof document !== "undefined") {
   const style = document.createElement("style");
   style.innerHTML = `
+    .config-logout-card {
+      display: block !important;
+    }
+    @media (min-width: 769px) {
+      .config-logout-card {
+        display: none !important;
+      }
+    }
     @media (max-width: 768px) {
       div[style*="grid-template-columns: 1.2fr 0.8fr"] {
         grid-template-columns: 1fr !important;
