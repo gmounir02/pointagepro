@@ -99,11 +99,6 @@ export default function Login() {
           </button>
         </form>
 
-        <div style={styles.footer}>
-          <p style={styles.footerText}>
-            Compte de test Admin : <strong>admin@company.ma</strong> / <strong>Admin@123</strong>
-          </p>
-        </div>
       </div>
     </div>
   );
