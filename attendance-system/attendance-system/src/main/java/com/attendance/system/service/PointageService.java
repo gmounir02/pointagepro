@@ -72,6 +72,33 @@ public class PointageService {
         LocalDate today = LocalDate.now();
         LocalDateTime now = LocalDateTime.now();
 
+        // 3.5. Valider l'intervalle de temps autorisé (de heureDebutTravail - 1h à heureFinTravail + 1h)
+        LocalTime heureDebut = (config != null && config.getHeureDebutTravail() != null)
+                ? config.getHeureDebutTravail()
+                : LocalTime.of(workStartHour, workStartMinute);
+
+        LocalTime heureFin = (config != null && config.getHeureFinTravail() != null)
+                ? config.getHeureFinTravail()
+                : LocalTime.of(17, 30);
+
+        LocalTime debutAutorise = heureDebut.minusHours(1);
+        LocalTime finAutorise = heureFin.plusHours(1);
+        LocalTime heureActuelle = now.toLocalTime();
+
+        if (debutAutorise.isBefore(finAutorise)) {
+            if (heureActuelle.isBefore(debutAutorise) || heureActuelle.isAfter(finAutorise)) {
+                throw new AttendanceException(String.format(
+                        "Le pointage n'est pas autorisé à cette heure. Vous pouvez pointer entre %s et %s.",
+                        debutAutorise, finAutorise));
+            }
+        } else {
+            if (heureActuelle.isBefore(debutAutorise) && heureActuelle.isAfter(finAutorise)) {
+                throw new AttendanceException(String.format(
+                        "Le pointage n'est pas autorisé à cette heure. Vous pouvez pointer entre %s et %s.",
+                        debutAutorise, finAutorise));
+            }
+        }
+
         // 4. Traiter selon le type (ENTREE / SORTIE)
         if (request.getType() == Pointage.TypePointage.ENTREE) {
             return traiterEntree(user, request, qrCode, today, now, config);
@@ -85,11 +112,11 @@ public class PointageService {
         // Charger tous les pointages du jour pour cet utilisateur
         List<Pointage> todayPointages = pointageRepository.findByUserIdAndDate(user.getId(), today);
 
-        // Vérifier s'il y a déjà une session d'entrée active (non fermée par une sortie)
-        boolean activeEntryExists = todayPointages.stream()
-                .anyMatch(p -> p.getHeureEntree() != null && p.getHeureSortie() == null);
-        if (activeEntryExists) {
-            throw new AttendanceException("Vous avez déjà une session d'entrée active. Veuillez d'abord pointer votre sortie.");
+        // Vérifier si l'employé a déjà effectué son pointage d'entrée pour aujourd'hui
+        boolean alreadyCheckedIn = todayPointages.stream()
+                .anyMatch(p -> p.getHeureEntree() != null);
+        if (alreadyCheckedIn) {
+            throw new AttendanceException("Vous avez déjà effectué votre pointage d'entrée pour aujourd'hui.");
         }
 
         // Détecter le retard (uniquement sur le tout premier pointage d'entrée de la journée)
@@ -140,6 +167,13 @@ public class PointageService {
                                     LocalDate today, LocalDateTime now) {
         // Charger tous les pointages du jour pour cet utilisateur
         List<Pointage> todayPointages = pointageRepository.findByUserIdAndDate(user.getId(), today);
+
+        // Vérifier si l'employé a déjà effectué son pointage de sortie pour aujourd'hui
+        boolean alreadyCheckedOut = todayPointages.stream()
+                .anyMatch(p -> p.getHeureSortie() != null);
+        if (alreadyCheckedOut) {
+            throw new AttendanceException("Vous avez déjà effectué votre pointage de sortie pour aujourd'hui.");
+        }
 
         // Trouver la session d'entrée active (qui n'a pas encore de sortie enregistrée)
         Pointage activePointage = todayPointages.stream()
@@ -297,7 +331,13 @@ public class PointageService {
     }
 
     public List<Pointage> getPointagesByDate(LocalDate date) {
-        return pointageRepository.findByDate(date);
+        List<Pointage> pointages = pointageRepository.findByDate(date);
+        pointages.sort((p1, p2) -> {
+            LocalDateTime t1 = p1.getHeureEntree() != null ? p1.getHeureEntree() : p1.getDate().atStartOfDay();
+            LocalDateTime t2 = p2.getHeureEntree() != null ? p2.getHeureEntree() : p2.getDate().atStartOfDay();
+            return t2.compareTo(t1); // décroissant
+        });
+        return pointages;
     }
 
     public List<Pointage> getPointagesByUser(String userId) {
@@ -318,7 +358,9 @@ public class PointageService {
     }
 
     public List<Pointage> getJustificationsEnAttente() {
-        return pointageRepository.findByStatutJustification("EN_ATTENTE");
+        List<Pointage> list = pointageRepository.findByStatutJustification("EN_ATTENTE");
+        list.sort((p1, p2) -> p2.getDate().compareTo(p1.getDate()));
+        return list;
     }
 
     public Pointage soumettreJustification(String pointageId, String userEmail, JustificationRequest request) {
@@ -603,7 +645,9 @@ public class PointageService {
     }
 
     public List<Pointage> getAllJustifications() {
-        return pointageRepository.findByStatutJustificationIn(java.util.Arrays.asList("EN_ATTENTE", "APPROUVEE", "REJETEE"));
+        List<Pointage> list = pointageRepository.findByStatutJustificationIn(java.util.Arrays.asList("EN_ATTENTE", "APPROUVEE", "REJETEE"));
+        list.sort((p1, p2) -> p2.getDate().compareTo(p1.getDate()));
+        return list;
     }
 
     @org.springframework.scheduling.annotation.Scheduled(cron = "0 59 23 * * *")

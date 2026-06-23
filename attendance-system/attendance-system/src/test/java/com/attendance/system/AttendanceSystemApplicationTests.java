@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,6 +70,18 @@ public class AttendanceSystemApplicationTests {
         congeRepository.deleteAll();
         qrCodeRepository.deleteAll();
         entrepriseConfigRepository.deleteAll();
+
+        // Créer une config entreprise par défaut avec horaires de 24h pour les tests
+        EntrepriseConfig config = EntrepriseConfig.builder()
+                .nomEntreprise("Test Company")
+                .latitude(33.5731)
+                .longitude(-7.5898)
+                .rayonMetres(1000)
+                .heureDebutTravail(LocalTime.of(0, 0))
+                .heureFinTravail(LocalTime.of(23, 59))
+                .toleranceRetardMinutes(10)
+                .build();
+        entrepriseConfigRepository.save(config);
 
         // Créer Admin par défaut
         User admin = User.builder()
