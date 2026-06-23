@@ -39,6 +39,7 @@ export default function DashboardHome() {
   const [historyPointages, setHistoryPointages] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedMonthFilter, setSelectedMonthFilter] = useState("all");
+  const [selectedDayFilter, setSelectedDayFilter] = useState("");
   const [previewSelfieModal, setPreviewSelfieModal] = useState(null); // { photo, title, time, date }
   
   // Edit Pointage States
@@ -209,6 +210,7 @@ export default function DashboardHome() {
     setHistoryEmployee({ id: empId, fullName });
     setHistoryPointages([]);
     setSelectedMonthFilter("all");
+    setSelectedDayFilter("");
     setLoadingHistory(true);
     setShowHistoryModal(true);
     try {
@@ -1120,8 +1122,9 @@ export default function DashboardHome() {
       {showHistoryModal && historyEmployee && (() => {
         const uniqueMonths = Array.from(new Set(historyPointages.map(p => p.date.substring(0, 7)))).sort().reverse();
         const filteredHistoryPointages = historyPointages.filter(p => {
-          if (selectedMonthFilter === "all") return true;
-          return p.date.startsWith(selectedMonthFilter);
+          const matchesMonth = selectedMonthFilter === "all" || p.date.startsWith(selectedMonthFilter);
+          const matchesDay = !selectedDayFilter || p.date === selectedDayFilter;
+          return matchesMonth && matchesDay;
         });
 
         return (
@@ -1163,6 +1166,41 @@ export default function DashboardHome() {
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   {historyPointages.length > 0 && (
                     <>
+                      <input
+                        type="date"
+                        style={{
+                          background: "rgba(255, 255, 255, 0.05)",
+                          color: "#fff",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "6px",
+                          padding: "5px 10px",
+                          fontSize: "0.75rem",
+                          outline: "none",
+                          cursor: "pointer",
+                          colorScheme: "dark"
+                        }}
+                        value={selectedDayFilter}
+                        onChange={(e) => setSelectedDayFilter(e.target.value)}
+                      />
+
+                      {selectedDayFilter && (
+                        <button
+                          type="button"
+                          style={{
+                            background: "rgba(244, 63, 94, 0.15)",
+                            color: "var(--danger)",
+                            border: "1px solid rgba(244, 63, 94, 0.3)",
+                            borderRadius: "6px",
+                            padding: "6px 10px",
+                            fontSize: "0.75rem",
+                            cursor: "pointer"
+                          }}
+                          onClick={() => setSelectedDayFilter("")}
+                        >
+                          ✕ Effacer
+                        </button>
+                      )}
+
                       <select
                         style={{
                           background: "rgba(255, 255, 255, 0.05)",

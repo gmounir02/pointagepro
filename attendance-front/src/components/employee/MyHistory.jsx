@@ -15,6 +15,7 @@ export default function MyHistory() {
   const [fileBase64, setFileBase64] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [selectedMonthFilter, setSelectedMonthFilter] = useState("all");
+  const [selectedDayFilter, setSelectedDayFilter] = useState("");
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -101,8 +102,9 @@ export default function MyHistory() {
 
   const uniqueMonths = Array.from(new Set(pointages.map(p => p.date.substring(0, 7)))).sort().reverse();
   const filteredPointages = pointages.filter(p => {
-    if (selectedMonthFilter === "all") return true;
-    return p.date.startsWith(selectedMonthFilter);
+    const matchesMonth = selectedMonthFilter === "all" || p.date.startsWith(selectedMonthFilter);
+    const matchesDay = !selectedDayFilter || p.date === selectedDayFilter;
+    return matchesMonth && matchesDay;
   });
 
   return (
@@ -113,27 +115,62 @@ export default function MyHistory() {
           <h2 style={styles.title}>Mon Historique de Présence</h2>
         </div>
         {pointages.length > 0 && (
-          <select
-            style={{
-              background: "rgba(255, 255, 255, 0.05)",
-              color: "#fff",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: "6px",
-              padding: "6px 12px",
-              fontSize: "0.75rem",
-              outline: "none",
-              cursor: "pointer"
-            }}
-            value={selectedMonthFilter}
-            onChange={(e) => setSelectedMonthFilter(e.target.value)}
-          >
-            <option value="all" style={{ background: "#12141d" }}>Tous les mois</option>
-            {uniqueMonths.map(ym => (
-              <option key={ym} value={ym} style={{ background: "#12141d" }}>
-                {new Date(ym + "-02").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
-              </option>
-            ))}
-          </select>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <input
+              type="date"
+              style={{
+                background: "rgba(255, 255, 255, 0.05)",
+                color: "#fff",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "6px",
+                padding: "5px 10px",
+                fontSize: "0.75rem",
+                outline: "none",
+                cursor: "pointer",
+                colorScheme: "dark"
+              }}
+              value={selectedDayFilter}
+              onChange={(e) => setSelectedDayFilter(e.target.value)}
+            />
+            {selectedDayFilter && (
+              <button
+                type="button"
+                style={{
+                  background: "rgba(244, 63, 94, 0.15)",
+                  color: "var(--danger)",
+                  border: "1px solid rgba(244, 63, 94, 0.3)",
+                  borderRadius: "6px",
+                  padding: "5px 10px",
+                  fontSize: "0.75rem",
+                  cursor: "pointer"
+                }}
+                onClick={() => setSelectedDayFilter("")}
+              >
+                ✕ Effacer
+              </button>
+            )}
+            <select
+              style={{
+                background: "rgba(255, 255, 255, 0.05)",
+                color: "#fff",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "6px",
+                padding: "6px 12px",
+                fontSize: "0.75rem",
+                outline: "none",
+                cursor: "pointer"
+              }}
+              value={selectedMonthFilter}
+              onChange={(e) => setSelectedMonthFilter(e.target.value)}
+            >
+              <option value="all" style={{ background: "#12141d" }}>Tous les mois</option>
+              {uniqueMonths.map(ym => (
+                <option key={ym} value={ym} style={{ background: "#12141d" }}>
+                  {new Date(ym + "-02").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
 
