@@ -345,7 +345,7 @@ Le projet est configuré pour un déploiement continu automatisé à chaque mise
   * Langage : Java 17 (Maven build)
   * Commande de build : `mvn clean package -DskipTests`
   * Commande de démarrage : `java -jar target/attendance-system-0.0.1-SNAPSHOT.jar`
-  * Base de données : Connexion à un cluster MongoDB Atlas cloud.
+  * Base de données : Connexion à un cluster MongoDB Atlas cloud (configurée via la variable d'environnement `SPRING_DATA_MONGODB_URI` ou `MONGODB_URI` sur Render).
 * **Fonctionnement du CI/CD** : Tout commit pushed vers le dépôt GitHub déclenche automatiquement la recompilation et le redémarrage sans interruption de service sur Render.
 
 ### 8.2 Hébergement du Frontend (Vite + React)

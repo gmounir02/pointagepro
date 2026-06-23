@@ -6,8 +6,8 @@ spring:
     name: attendance-system
   data:
     mongodb:
-      uri: mongodb://localhost:27017/attendance_system
-      database: attendance_system
+      uri: ${SPRING_DATA_MONGODB_URI:${MONGODB_URI:mongodb://localhost:27017/attendance_system}}
+      database: ${SPRING_DATA_MONGODB_DATABASE:attendance_system}
 
 app:
   jwt:
