@@ -29,7 +29,8 @@ export default function DashboardHome() {
     present: [],
     late: [],
     absent: [],
-    all: []
+    all: [],
+    anomalies: []
   });
 
   // History Modal State
@@ -331,6 +332,7 @@ export default function DashboardHome() {
       const lateList = [];
       const absentList = [];
       const allList = [];
+      const anomalyList = [];
 
       normalEmployees.forEach(emp => {
         const empPointages = todayPointages.filter(p => p.userId === emp.id);
@@ -401,6 +403,9 @@ export default function DashboardHome() {
             } else {
               presentList.push(record);
             }
+            if (record.sortieAnticipee || record.heuresInsuffisantes) {
+              anomalyList.push(record);
+            }
             allList.push(record);
           }
         } else {
@@ -429,7 +434,8 @@ export default function DashboardHome() {
         present: presentList,
         late: lateList,
         absent: absentList,
-        all: allList
+        all: allList,
+        anomalies: anomalyList
       });
 
     } catch (err) {
@@ -567,9 +573,12 @@ export default function DashboardHome() {
         {/* Anomalies Card */}
         <div 
           className="glass-card" 
+          onClick={() => setActiveKpiTab("anomalies")}
           style={{ 
             ...styles.kpiCard, 
-            borderColor: "rgba(244, 63, 94, 0.2)",
+            cursor: "pointer",
+            borderColor: activeKpiTab === "anomalies" ? "var(--danger)" : "rgba(244, 63, 94, 0.2)",
+            boxShadow: activeKpiTab === "anomalies" ? "0 0 15px rgba(244, 63, 94, 0.2)" : "none",
             background: "rgba(244, 63, 94, 0.02)"
           }}
         >
@@ -601,15 +610,18 @@ export default function DashboardHome() {
               {activeKpiTab === "present" && "Employés Présents (À l'heure)"}
               {activeKpiTab === "late" && "Employés en Retard"}
               {activeKpiTab === "absent" && "Employés Absents"}
+              {activeKpiTab === "anomalies" && "Employés avec Anomalies (Aujourd'hui)"}
             </h3>
             <span className="badge" style={{
               background: activeKpiTab === "present" ? "rgba(16, 185, 129, 0.1)" :
                           activeKpiTab === "late" ? "rgba(245, 158, 11, 0.1)" :
                           activeKpiTab === "absent" ? "rgba(244, 63, 94, 0.1)" :
+                          activeKpiTab === "anomalies" ? "rgba(244, 63, 94, 0.15)" :
                           "rgba(139, 92, 246, 0.1)",
               color: activeKpiTab === "present" ? "var(--success)" :
                      activeKpiTab === "late" ? "var(--warning)" :
                      activeKpiTab === "absent" ? "var(--danger)" :
+                     activeKpiTab === "anomalies" ? "var(--danger)" :
                      "var(--primary)"
             }}>
               {dayDetails[activeKpiTab]?.length || 0}
